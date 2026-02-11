@@ -8,3 +8,10 @@ SSU_kompendie-2.pdf
 
 # Claude configuration
 .claude/
+
+# Project repository (separate git repo)
+MLOps-PJK/
+
+# Utility scripts
+convert_pdfs_to_md.py
+CLAUDE.md
