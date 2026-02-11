@@ -45,10 +45,10 @@
 
 %%%%%%%%% TITLE - PLEASE UPDATE
 \title{DAKI4 - MLOps Report}
-\author{Student name:\\
-Student number:\\
-Student e-mail:\\
-MLOps pipeline Github link:
+\author{Jonas\\
+Student number: [INDSÆT]\\
+Student e-mail: [INDSÆT]@student.aau.dk\\
+MLOps pipeline Github link: \url{https://github.com/jonas0711/DAKI4---MLOps-Jonas}
 }
 \maketitle
 
@@ -61,26 +61,94 @@ This is the hand-in template for the DAKI4 MLOps course. Please fill in your ans
 Reports will be subject to plagiarism checks to ensure originality. Please declare any use of Generative AI according to AAU rules, see \href{https://www.studerende.aau.dk/regler-og-praktisk/regler/regler-for-brug-af-generativ-ai}{https://www.studerende.aau.dk/regler-og-praktisk/regler/regler-for-brug-af-generativ-ai}
 
 %%%%%%%%% BODY TEXT
-\section{Introduction to MLOps}
-Please use this template to document what you have done in the course (i.e. your solution to the exercises for each lecture), why you did this specifically (i.e. the need for this step in your MLOps pipeline, and the choice of method), and the results. 
+\section{Introduction to MLOps}\label{sec:intro}
 
-You cannot pass the exam with just an explanation of the different MLOps concepts. For each module, there needs to be "proof" of an actual implementation. Examples of proofs include benchmark results before and after model optimization, and screenshots of GPU utilization. It's not enough just to write that some metric has improved without presenting the actual results, or stating that you used tool x. 
+\subsection{D1.1: Introduction to MLOps}
+Machine Learning Operations (MLOps) is a set of best practices that combines Machine Learning (ML), DevOps, and Data Engineering to manage the full lifecycle of ML models in production. While traditional software development has evolved from waterfall to agile to DevOps methodologies, ML applications present unique challenges that require a new approach.
 
-You are free to change the order of the sections if needed, but please do not change the titles. 
+The fundamental difference between traditional software and ML systems is that ML is not just code—it is \textbf{code plus data}. This relationship means that both code and data must evolve together in a controlled manner. Without a systematic MLOps approach, divergence between code and data evolution can cause problems in production, hinder smooth deployment, and lead to results that are hard to trace or reproduce.
 
-Remember that it's your job to convince me that you have actually obtained sufficient knowledge, skills, and competencies within MLOps to pass the course exam.\\
-
-You risk not passing the course exam if you:
+\textbf{Key differences from traditional development paradigms:}
 \begin{itemize}
-    \item Do not answer a sufficient number of the documentation requirements (At least 75\% should be answered to a sufficient degree)
-    \item Fail to include results, screenshots or other proof of implementation for each documentation requirement
-    \item Do not meet the minimum of 8-pages
-    \item Do not provide a link to your MLOps pipeline implementation Github
-    \item Use generative AI to write parts of your report without proper citation (Please refer to: \href{https://www.en.aub.aau.dk/students/generative-ai/good-academic-practice}{https://www.en.aub.aau.dk/students/generative-ai/good-academic-practice})
+    \item \textbf{Waterfall}: Linear, non-iterative development unsuitable for dynamic ML projects where requirements change based on model performance and data drift.
+    \item \textbf{Agile}: Iterative but doesn't address the data-centric nature of ML systems or the need for continuous model monitoring.
+    \item \textbf{DevOps}: Focuses on code CI/CD but lacks mechanisms for data versioning, model registry, and ML-specific monitoring.
+    \item \textbf{MLOps}: Extends DevOps with three interconnected cycles—data, model, and code—ensuring reproducibility, traceability, and continuous improvement.
 \end{itemize}
 
+The MLOps workflow consists of three main phases: \textbf{Build} (data ingestion, model training, testing, packaging, registering), \textbf{Deploy} (application testing, production release via CI/CD), and \textbf{Monitor} (monitoring data integrity, model drift, and application performance). These are enabled by key drivers: data, code, artifacts, middleware, and infrastructure.
 
-The repository also contains an example (MLOps-Example-Report.pdf) for documenting an MLOps pipeline within the context of this curriculum (excluding the summary table, which was introduced in 2026). 
+\subsection{D1.2: Project Description}
+% TODO: Beskriv dit valgte projekt her
+For this course, I have selected [INDSÆT PROJEKT NAVN] as the foundation for building an MLOps pipeline. The project involves [BESKRIV KORT HVAD PROJEKTET GØR].
+
+\textbf{Project specifications:}
+\begin{itemize}
+    \item \textbf{Model type}: [f.eks. CNN, Transformer, etc.]
+    \item \textbf{Task}: [f.eks. Image classification, Object detection, etc.]
+    \item \textbf{Dataset}: [DATASÆT NAVN OG STØRRELSE]
+    \item \textbf{Framework}: PyTorch / TensorFlow
+\end{itemize}
+
+The project repository is available at: \url{https://github.com/jonas0711/DAKI4---MLOps-Jonas}
+
+\subsection{D1.3: Foreseen Challenges}
+Based on the selected project, I anticipate the following challenges in developing and maintaining the MLOps pipeline:
+
+\textbf{Development challenges:}
+\begin{itemize}
+    \item Ensuring code quality and adherence to PEP8 standards across the team
+    \item Managing dependencies and environment consistency between development and production
+    \item Implementing proper configuration management to avoid hardcoded hyperparameters
+\end{itemize}
+
+\textbf{Reproducibility challenges:}
+\begin{itemize}
+    \item Versioning large datasets efficiently using DVC and remote storage (MinIO/S3)
+    \item Tracking experiment configurations, hyperparameters, and resulting metrics
+    \item Ensuring consistent training environments across different machines
+\end{itemize}
+
+\textbf{Monitoring and maintenance challenges:}
+\begin{itemize}
+    \item Detecting model drift when input data distribution changes over time
+    \item Setting up appropriate alerts and triggers for model retraining
+    \item Balancing model performance with inference latency requirements
+\end{itemize}
+
+\subsection{D1.4: Model Card}
+A model card serves as a "single source of truth" about a model, enabling full traceability from predictions back to the exact code, data, and configuration used for training. The initial draft of the model card for this project is provided in the Appendix (see \Cref{sec:appendix}).
+
+The model card includes:
+\begin{itemize}
+    \item Git repository URL and commit hash
+    \item Dataset name, version, and pointer to data storage
+    \item Experiment tracking ID (MLflow run ID)
+    \item Training environment specifications
+    \item Known limitations, biases, and risks
+\end{itemize}
+
+\subsection{Implementation: Exercises}
+The following exercises were completed for Module 1:
+
+\textbf{1. GitHub Repository Setup:}
+A GitHub repository was created with proper .gitignore configuration to exclude unnecessary files such as virtual environments, cached files, and sensitive credentials.
+
+\textbf{2. Project Structure:}
+The base deep-learning project was initialized with the following structure:
+\begin{verbatim}
+├── config/          # Configuration files
+├── data/            # Data directory (ignored)
+├── models/          # Model definitions
+├── scripts/         # Training/testing scripts
+├── requirements.txt # Dependencies
+└── README.md        # Documentation
+\end{verbatim}
+
+\textbf{3. Configuration Management:}
+Configuration files using YAML format were created to manage hyperparameters, ensuring no hardcoded values in the training scripts. This enables reproducible experiments and easy hyperparameter tuning.
+
+% TODO: Tilføj screenshots af GitHub repo, config filer, etc. 
 
 \section{Continuous ML}
 Please reference all figures as Fig.~\ref{fig:figure1}, and similarly for tables.
@@ -106,8 +174,59 @@ Please cite all sources in the following style \cite{vaswani2017attention}.
 \section{Summary}
 \input{summary}
 
-\section{Appendix}
-Place your model card here
+\section{Appendix}\label{sec:appendix}
+
+\subsection{Model Card}
+\begin{table}[h]
+\centering
+\caption{Model Card for [MODEL NAVN]}
+\label{tab:modelcard}
+\begin{tabularx}{\linewidth}{@{} l X @{}}
+\toprule
+\textbf{Field} & \textbf{Value} \\
+\midrule
+\textbf{Model Name} & [INDSÆT] \\
+\textbf{Version} & 1.0.0 \\
+\textbf{Date} & [DATO] \\
+\midrule
+\multicolumn{2}{l}{\textbf{Code}} \\
+Repository & \url{https://github.com/jonas0711/DAKI4---MLOps-Jonas} \\
+Commit Hash & [INDSÆT COMMIT HASH] \\
+Branch & main \\
+\midrule
+\multicolumn{2}{l}{\textbf{Data}} \\
+Dataset & [DATASÆT NAVN] \\
+Version & [DVC VERSION HASH] \\
+Storage & MinIO S3 bucket \\
+Train/Val/Test Split & [f.eks. 80/10/10] \\
+\midrule
+\multicolumn{2}{l}{\textbf{Training}} \\
+Framework & PyTorch [VERSION] \\
+Environment & Docker / venv \\
+Hardware & [f.eks. NVIDIA RTX Pro 4000 Ada] \\
+Training Time & [TIMER] \\
+MLflow Run ID & [INDSÆT] \\
+\midrule
+\multicolumn{2}{l}{\textbf{Hyperparameters}} \\
+Learning Rate & [VÆRDI] \\
+Batch Size & [VÆRDI] \\
+Epochs & [VÆRDI] \\
+Optimizer & [f.eks. Adam] \\
+\midrule
+\multicolumn{2}{l}{\textbf{Performance}} \\
+Accuracy & [VÆRDI]\% \\
+Precision & [VÆRDI]\% \\
+Recall & [VÆRDI]\% \\
+F1-Score & [VÆRDI]\% \\
+\midrule
+\multicolumn{2}{l}{\textbf{Limitations \& Risks}} \\
+Known Biases & [BESKRIV EVENTUELLE BIASES] \\
+Limitations & [BESKRIV BEGRÆNSNINGER] \\
+Intended Use & [FORMÅL] \\
+Out-of-Scope Use & [HVAD BØR MODELLEN IKKE BRUGES TIL] \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 %%%%%%%%% REFERENCES
 {\small
