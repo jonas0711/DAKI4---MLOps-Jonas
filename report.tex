@@ -48,7 +48,7 @@
 \author{Jonas\\
 Student number: [INDSÆT]\\
 Student e-mail: [INDSÆT]@student.aau.dk\\
-MLOps pipeline Github link: \url{https://github.com/jonas0711/DAKI4---MLOps-Jonas}
+MLOps pipeline Github link: \url{https://github.com/katrinemie/MLOps-PJK}
 }
 \maketitle
 
@@ -79,18 +79,19 @@ The fundamental difference between traditional software and ML systems is that M
 The MLOps workflow consists of three main phases: \textbf{Build} (data ingestion, model training, testing, packaging, registering), \textbf{Deploy} (application testing, production release via CI/CD), and \textbf{Monitor} (monitoring data integrity, model drift, and application performance). These are enabled by key drivers: data, code, artifacts, middleware, and infrastructure.
 
 \subsection{D1.2: Project Description}
-% TODO: Beskriv dit valgte projekt her
-For this course, I have selected [INDSÆT PROJEKT NAVN] as the foundation for building an MLOps pipeline. The project involves [BESKRIV KORT HVAD PROJEKTET GØR].
+For this course, I have selected \textbf{Cats vs Dogs Image Classification} as the foundation for building an MLOps pipeline. The project involves training a deep learning model to classify images of cats and dogs using the Microsoft Cats vs Dogs dataset from Kaggle.
 
 \textbf{Project specifications:}
 \begin{itemize}
-    \item \textbf{Model type}: [f.eks. CNN, Transformer, etc.]
-    \item \textbf{Task}: [f.eks. Image classification, Object detection, etc.]
-    \item \textbf{Dataset}: [DATASÆT NAVN OG STØRRELSE]
-    \item \textbf{Framework}: PyTorch / TensorFlow
+    \item \textbf{Model type}: Convolutional Neural Network (CNN)
+    \item \textbf{Task}: Binary image classification (Cat vs Dog)
+    \item \textbf{Dataset}: Microsoft Cats vs Dogs (Kaggle) - approximately 25,000 images (12,500 cats, 12,500 dogs)
+    \item \textbf{Framework}: PyTorch
 \end{itemize}
 
-The project repository is available at: \url{https://github.com/jonas0711/DAKI4---MLOps-Jonas}
+The dataset is downloaded via a custom script using the KaggleHub API, ensuring reproducible data acquisition. Data versioning is handled through DVC (Data Version Control), which is already configured in the project repository.
+
+The project repository is available at: \url{https://github.com/katrinemie/MLOps-PJK}
 
 \subsection{D1.3: Foreseen Challenges}
 Based on the selected project, I anticipate the following challenges in developing and maintaining the MLOps pipeline:
@@ -179,25 +180,25 @@ Please cite all sources in the following style \cite{vaswani2017attention}.
 \subsection{Model Card}
 \begin{table}[h]
 \centering
-\caption{Model Card for [MODEL NAVN]}
+\caption{Model Card for Cats vs Dogs Classifier}
 \label{tab:modelcard}
 \begin{tabularx}{\linewidth}{@{} l X @{}}
 \toprule
 \textbf{Field} & \textbf{Value} \\
 \midrule
-\textbf{Model Name} & [INDSÆT] \\
+\textbf{Model Name} & CatDogCNN \\
 \textbf{Version} & 1.0.0 \\
 \textbf{Date} & [DATO] \\
 \midrule
 \multicolumn{2}{l}{\textbf{Code}} \\
-Repository & \url{https://github.com/jonas0711/DAKI4---MLOps-Jonas} \\
+Repository & \url{https://github.com/katrinemie/MLOps-PJK} \\
 Commit Hash & [INDSÆT COMMIT HASH] \\
 Branch & main \\
 \midrule
 \multicolumn{2}{l}{\textbf{Data}} \\
-Dataset & [DATASÆT NAVN] \\
+Dataset & Microsoft Cats vs Dogs (Kaggle) \\
 Version & [DVC VERSION HASH] \\
-Storage & MinIO S3 bucket \\
+Storage & MinIO S3 bucket / Kaggle \\
 Train/Val/Test Split & [f.eks. 80/10/10] \\
 \midrule
 \multicolumn{2}{l}{\textbf{Training}} \\
@@ -211,7 +212,7 @@ MLflow Run ID & [INDSÆT] \\
 Learning Rate & [VÆRDI] \\
 Batch Size & [VÆRDI] \\
 Epochs & [VÆRDI] \\
-Optimizer & [f.eks. Adam] \\
+Optimizer & Adam \\
 \midrule
 \multicolumn{2}{l}{\textbf{Performance}} \\
 Accuracy & [VÆRDI]\% \\
@@ -220,10 +221,10 @@ Recall & [VÆRDI]\% \\
 F1-Score & [VÆRDI]\% \\
 \midrule
 \multicolumn{2}{l}{\textbf{Limitations \& Risks}} \\
-Known Biases & [BESKRIV EVENTUELLE BIASES] \\
-Limitations & [BESKRIV BEGRÆNSNINGER] \\
-Intended Use & [FORMÅL] \\
-Out-of-Scope Use & [HVAD BØR MODELLEN IKKE BRUGES TIL] \\
+Known Biases & Dataset contains some corrupted images that must be filtered \\
+Limitations & Binary classification only (cat/dog), not other animals \\
+Intended Use & Educational MLOps pipeline demonstration \\
+Out-of-Scope Use & Production pet detection systems without further validation \\
 \bottomrule
 \end{tabularx}
 \end{table}
