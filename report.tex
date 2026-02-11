@@ -1,0 +1,118 @@
+% CVPR 2022 Paper Template
+% based on the CVPR template provided by Ming-Ming Cheng (https://github.com/MCG-NKU/CVPR_Template)
+% modified and extended by Stefan Roth (stefan.roth@NOSPAMtu-darmstadt.de)
+
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+%%%%%%%%% PAPER TYPE  - PLEASE UPDATE FOR FINAL VERSION
+%\usepackage[review]{cvpr}      % To produce the REVIEW version
+\usepackage[pagenumbers]{cvpr} % To force page numbers, e.g. for an arXiv version
+
+% Include other packages here, before hyperref.
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+
+% It is strongly recommended to use hyperref, especially for the review version.
+% hyperref with option pagebackref eases the reviewers' job.
+% Please disable hyperref *only* if you encounter grave issues, e.g. with the
+% file validation for the camera-ready version.
+%
+% If you comment hyperref and then uncomment it, you should delete
+% ReviewTempalte.aux before re-running LaTeX.
+% (Or just hit 'q' on the first LaTeX run, let it finish, and you
+%  should be clear).
+\usepackage[pagebackref,breaklinks,colorlinks]{hyperref}
+
+
+% Support for easy cross-referencing
+\usepackage[capitalize]{cleveref}
+\crefname{section}{Sec.}{Secs.}
+\Crefname{section}{Section}{Sections}
+\Crefname{table}{Table}{Tables}
+\crefname{table}{Tab.}{Tabs.}
+
+
+%%%%%%%%% PAPER ID  - PLEASE UPDATE
+\def\cvprPaperID{*****} % *** Enter the CVPR Paper ID here
+\def\confName{CVPR}
+\def\confYear{2022}
+
+
+\begin{document}
+
+%%%%%%%%% TITLE - PLEASE UPDATE
+\title{DAKI4 - MLOps Report}
+\author{Student name:\\
+Student number:\\
+Student e-mail:\\
+MLOps pipeline Github link:
+}
+\maketitle
+
+%%%%%%%%% ABSTRACT
+\begin{abstract}
+This is the hand-in template for the DAKI4 MLOps course. Please fill in your answers to the exercises and the specific documentation requirements for each course module. In the summary section, please complete the table with a summary of your answers and a reference to the full explanation. You are supposed to collaborate with others on the same project and jointly implement MLOps techniques. However, this report must be written individually.
+\end{abstract}
+
+\section*{Preface}
+Reports will be subject to plagiarism checks to ensure originality. Please declare any use of Generative AI according to AAU rules, see \href{https://www.studerende.aau.dk/regler-og-praktisk/regler/regler-for-brug-af-generativ-ai}{https://www.studerende.aau.dk/regler-og-praktisk/regler/regler-for-brug-af-generativ-ai}
+
+%%%%%%%%% BODY TEXT
+\section{Introduction to MLOps}
+Please use this template to document what you have done in the course (i.e. your solution to the exercises for each lecture), why you did this specifically (i.e. the need for this step in your MLOps pipeline, and the choice of method), and the results. 
+
+You cannot pass the exam with just an explanation of the different MLOps concepts. For each module, there needs to be "proof" of an actual implementation. Examples of proofs include benchmark results before and after model optimization, and screenshots of GPU utilization. It's not enough just to write that some metric has improved without presenting the actual results, or stating that you used tool x. 
+
+You are free to change the order of the sections if needed, but please do not change the titles. 
+
+Remember that it's your job to convince me that you have actually obtained sufficient knowledge, skills, and competencies within MLOps to pass the course exam.\\
+
+You risk not passing the course exam if you:
+\begin{itemize}
+    \item Do not answer a sufficient number of the documentation requirements (At least 75\% should be answered to a sufficient degree)
+    \item Fail to include results, screenshots or other proof of implementation for each documentation requirement
+    \item Do not meet the minimum of 8-pages
+    \item Do not provide a link to your MLOps pipeline implementation Github
+    \item Use generative AI to write parts of your report without proper citation (Please refer to: \href{https://www.en.aub.aau.dk/students/generative-ai/good-academic-practice}{https://www.en.aub.aau.dk/students/generative-ai/good-academic-practice})
+\end{itemize}
+
+
+The repository also contains an example (MLOps-Example-Report.pdf) for documenting an MLOps pipeline within the context of this curriculum (excluding the summary table, which was introduced in 2026). 
+
+\section{Continuous ML}
+Please reference all figures as Fig.~\ref{fig:figure1}, and similarly for tables.
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{figures/precision.png}
+    \caption{Caption}
+    \label{fig:figure1}
+\end{figure}
+\section{Scalable Training}
+Please reference equations as Eq.~\ref{eq:equation1}.
+\begin{equation}
+    1+1=2
+\end{equation}
+\label{eq:equation1}
+\section{Scalable Inference}
+Please cite all sources in the following style \cite{vaswani2017attention}.
+
+\section{Deployment}
+\section{Monitoring}
+\section{Guest Lecture}\label{sec:guest-lecture}
+\section{Post Deployment}
+\section{Summary}
+\input{summary}
+
+\section{Appendix}
+Place your model card here
+
+%%%%%%%%% REFERENCES
+{\small
+\bibliographystyle{ieee_fullname}
+\bibliography{egbib}
+}
+
+\end{document}
