@@ -6,3 +6,9 @@ logs/
 P3-Engineering MLOps.pdf
 SSU_kompendie-2.pdf
 
+
+# Project repository (separate git repo)
+MLOps-PJK/
+
+# Utility scripts
+convert_pdfs_to_md.py
