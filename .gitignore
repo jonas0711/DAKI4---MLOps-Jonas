@@ -1,0 +1,10 @@
+# Existing course materials
+Lektion */
+logs/
+
+# PDF files
+P3-Engineering MLOps.pdf
+SSU_kompendie-2.pdf
+
+# Claude configuration
+.claude/
