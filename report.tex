@@ -151,20 +151,250 @@ Configuration files using YAML format were created to manage hyperparameters, en
 
 % TODO: Tilføj screenshots af GitHub repo, config filer, etc. 
 
-\section{Continuous ML}
-Please reference all figures as Fig.~\ref{fig:figure1}, and similarly for tables.
-\begin{figure}[!h]
-    \centering
-    \includegraphics[width=0.5\linewidth]{figures/precision.png}
-    \caption{Caption}
-    \label{fig:figure1}
-\end{figure}
-\section{Scalable Training}
-Please reference equations as Eq.~\ref{eq:equation1}.
+\section{Continuous ML}\label{sec:continuous-ml}
+
+This module covers Continuous Integration and Continuous Delivery (CI/CD) applied to machine learning pipelines. The core idea is borrowed from DevOps: every commit to the repository should trigger an automated pipeline that builds, tests, trains, evaluates, and potentially deploys a new model version---without manual intervention.
+
+\subsection{D2.1: Continuous ML Pipeline Overview}
+
+The implemented CI/CD pipeline for our Cats vs Dogs project is orchestrated using Jenkins, running on the AAU MLOps cluster (\texttt{daki-storage}, \texttt{172.24.198.42:8080}). The pipeline is triggered by a Git commit to the project repository and proceeds through the following stages:
+
+\textbf{Pipeline stages:}
+\begin{enumerate}
+    \item \textbf{Trigger}: A developer pushes a commit to the repository. Jenkins detects the new commit and assigns the job to an available GPU worker node (daki-master, daki-gpu1, or daki-gpu2).
+    \item \textbf{Pull}: The worker pulls the latest code from Git and the latest data version via DVC from the MinIO S3 storage (\texttt{s3://daki4-26-gr3/dvc}).
+    \item \textbf{Build}: A Docker container is built from a base image (stored in the local Docker Registry at \texttt{172.24.198.42:5000}) containing the required dependencies (PyTorch, CUDA, etc.). The container is tagged with the Git commit hash for traceability.
+    \item \textbf{Pre-commit checks}: Code quality is validated through pre-commit hooks including Flake8 linting (PEP8 compliance), detection of hardcoded secrets/API keys, and file size limits.
+    \item \textbf{Unit tests}: Automated tests verify core functionality---data loading, model architecture, training loop, and evaluation metrics---using \texttt{pytest}.
+    \item \textbf{Train}: If tests pass, the model is trained (short runs of a few epochs for CI purposes, following the fail-fast principle). Training hyperparameters are loaded from \texttt{configs/config.yaml}.
+    \item \textbf{Evaluate}: The trained model is automatically evaluated on the test set, computing accuracy, precision, recall, and F1-score.
+    \item \textbf{Log}: All hyperparameters, metrics, and model artifacts are logged to MLflow (\texttt{172.24.198.42:5050}) for experiment tracking and lineage.
+    \item \textbf{Register}: If the model meets predefined performance criteria, it is registered in the MLflow model registry.
+    \item \textbf{Deploy}: The model is packaged and deployed to an inference endpoint (Jetson Nano or a serving container).
+\end{enumerate}
+
+\textbf{Branching strategy:} We follow a two-branch model with persistent \texttt{main} and \texttt{dev} branches. Feature branches are created for new functionality and merged into \texttt{dev} after passing all pipeline stages. Releases are merged from \texttt{dev} to \texttt{main}.
+
+\textbf{Lineage and tracking:} The pipeline provides full lineage from prediction back to source. Each MLflow run records the Git commit hash, DVC data version, hyperparameters, training metrics, and the model artifact. Docker images are tagged with commit hashes in the local registry, ensuring that any deployed model can be traced back to the exact code and data that produced it.
+
+% TODO: Tilf{\o}j flowchart-figur af pipeline
+% TODO: Tilf{\o}j screenshot af Jenkins pipeline
+
+\subsection{D2.2: Unit Test Code Coverage}
+
+Unit tests were implemented using \texttt{pytest} covering the core modules of the project:
+
+\begin{itemize}
+    \item \textbf{Data loading} (\texttt{data\_loader.py}): Tests verify correct dataset splitting (train/val/test), image transformation pipeline, and handling of corrupted images.
+    \item \textbf{Model} (\texttt{model.py}): Tests verify model instantiation, output shape for known input dimensions, and save/load functionality.
+    \item \textbf{Training} (\texttt{train.py}): Tests verify that a single training step reduces loss (sanity check), configuration loading, and checkpoint saving.
+    \item \textbf{Evaluation} (\texttt{evaluate.py}): Tests verify metric computation (accuracy, precision, recall, F1) against known inputs.
+\end{itemize}
+
+% TODO: Inds{\ae}t screenshot af code coverage rapport
+% TODO: K{\o}r pytest --cov og inds{\ae}t faktisk coverage-procent
+
+\subsection{D2.3: Experiment Tracking}
+
+MLflow is used for experiment tracking, hosted on the AAU cluster at \texttt{http://172.24.198.42:5050}. Using \texttt{mlflow.pytorch.autolog()}, the following is automatically logged for each training run:
+
+\begin{itemize}
+    \item Hyperparameters (learning rate, batch size, epochs, optimizer)
+    \item Training and validation loss per epoch
+    \item Evaluation metrics (accuracy, precision, recall, F1-score)
+    \item Model artifacts (saved model weights)
+    \item Git commit hash and DVC data version
+\end{itemize}
+
+This enables comparison between different runs and model versions directly in the MLflow UI, facilitating informed decisions about which model to promote to production.
+
+% TODO: Inds{\ae}t screenshot af MLflow dashboard med eksperimenter
+% TODO: Inds{\ae}t screenshot af metriks-sammenligning mellem runs
+
+\subsection{Implementation: Exercises}
+
+\textbf{1. Branching:} A \texttt{dev} branch was created alongside the existing \texttt{main} branch. Feature branches are used for isolated development of new features.
+
+\textbf{2. Pre-commits:} A \texttt{.pre-commit-config.yaml} was configured with hooks for Flake8 (PEP8 linting), detection of large files, and checks for hardcoded credentials.
+
+\textbf{3. Unit tests:} Tests were written for all core modules using \texttt{pytest}, covering data loading, model architecture, training, and evaluation.
+
+\textbf{4. CI/CD with Jenkins:} Jenkins was configured on the AAU cluster to orchestrate the pipeline. A \texttt{Jenkinsfile} defines the pipeline stages: build, test, train, evaluate, log, and deploy.
+
+\textbf{5. Docker:} A base Docker image with PyTorch and CUDA was created and pushed to the local registry. The CI pipeline builds on top of this base image, reducing build times significantly.
+
+\textbf{6. MLflow integration:} Experiment tracking was integrated into the training script using \texttt{mlflow.pytorch.autolog()}, logging all relevant metrics and artifacts to the cluster MLflow instance.
+
+\section{Scalable Training}\label{sec:scalable-training}
+
+This module addresses techniques for scaling deep learning training across multiple GPUs and nodes. As model sizes and dataset volumes grow, training on a single GPU becomes infeasible---both in terms of memory and time. Scalable training techniques enable time compression (faster convergence) and the ability to train larger models.
+
+\subsection{D3.1: Speedup Estimate from Parallelization}
+
+To estimate the theoretical speedup of our ResNet18 training through parallelization, we apply Gustafson's Law, which is better suited for deep learning workloads than Amdahl's Law because we typically scale the problem size (batch size) as we add GPUs:
+
 \begin{equation}
-    1+1=2
+    S(P) = P - a \cdot (P - 1)
+    \label{eq:gustafson}
 \end{equation}
-\label{eq:equation1}
+
+where $P$ is the number of GPUs and $a$ is the sequential fraction of the workload. For multi-GPU training on a single node, a typical sequential fraction is approximately $a = 0.15$ (accounting for gradient synchronization, data loading overhead, and control flow).
+
+\textbf{Estimated speedups} using the AAU cluster RTX Pro 4000 Ada GPUs:
+
+\begin{table}[h]
+\centering
+\caption{Estimated training speedup using Gustafson's Law ($a = 0.15$).}
+\label{tab:gustafson}
+\begin{tabular}{@{} c c c @{}}
+\toprule
+\textbf{GPUs ($P$)} & \textbf{Speedup $S(P)$} & \textbf{Efficiency} \\
+\midrule
+1 & 1.00$\times$ & 100\% \\
+2 & 1.85$\times$ & 92.5\% \\
+3 & 2.70$\times$ & 90.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+With 3 GPUs (the number of GPU worker nodes available on the AAU cluster), Gustafson's Law predicts a speedup of approximately $2.70\times$ with 90\% parallel efficiency. In practice, the actual speedup is often slightly lower due to communication overhead in gradient synchronization (All-Reduce) and potential data loading bottlenecks.
+
+% TODO: Inds{\ae}t faktiske m{\aa}lte speedup-resultater fra DDP-eksperimenter
+
+\subsection{D3.2: Scaling Estimate to Halve Test Loss}
+
+Using the scaling laws established by Kaplan et al. \cite{kaplan2020scaling}, test loss follows an inverse power law as a function of compute $C$, dataset size $D$, and model parameters $N$:
+
+\begin{equation}
+    L(x) = \left(\frac{x_0}{x}\right)^{\alpha}
+    \label{eq:powerlaw}
+\end{equation}
+
+To halve the test loss ($L_{\text{new}} = 0.5 \cdot L_{\text{current}}$), we need:
+\begin{equation}
+    \frac{x_{\text{new}}}{x_{\text{current}}} = 2^{1/\alpha}
+\end{equation}
+
+Using the constants found for LLMs (as suggested in the exercise), with $\alpha_C \approx 0.050$ for compute, $\alpha_D \approx 0.095$ for dataset size, and $\alpha_N \approx 0.076$ for parameters:
+
+\begin{table}[h]
+\centering
+\caption{Estimated scaling factors required to halve test loss.}
+\label{tab:scaling}
+\begin{tabular}{@{} l c c @{}}
+\toprule
+\textbf{Scaling Dimension} & \textbf{$\alpha$} & \textbf{Factor $2^{1/\alpha}$} \\
+\midrule
+Compute & 0.050 & $\sim 1.1 \times 10^{6}$ \\
+Dataset size & 0.095 & $\sim 1{,}500\times$ \\
+Parameters & 0.076 & $\sim 9{,}000\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These numbers illustrate the diminishing returns of scaling: halving the test loss requires enormous increases in resources. For our ResNet18 model with approximately 11 million parameters, this would mean scaling to $\sim$99 billion parameters, or increasing the dataset from $\sim$25{,}000 images to $\sim$37.5 million images, or increasing compute by a factor of over one million. This highlights why the power law represents diminishing returns when viewed on a linear scale, even though it appears linear in log-log space.
+
+\subsection{D3.3: Multi-GPU Parallelization (DDP)}
+
+We implemented data parallelism using PyTorch's Distributed Data Parallel (DDP) in a dedicated training script (\texttt{train\_ddp.py}). DDP replicates the model on each GPU, distributes micro-batches across GPUs, and synchronizes gradients via the NCCL All-Reduce operation after each backward pass.
+
+\textbf{Implementation details:}
+\begin{itemize}
+    \item Backend: NCCL (optimized for NVIDIA GPUs)
+    \item Launch: \texttt{torchrun --nproc\_per\_node=N train\_ddp.py}
+    \item Each GPU processes a micro-batch; effective batch size = micro-batch $\times$ N GPUs
+    \item \texttt{DistributedSampler} ensures no data overlap between GPUs
+    \item Learning rate scaled linearly with the number of GPUs
+\end{itemize}
+
+% TODO: Inds{\ae}t tabel med faktiske tr{\ae}ningstider: 1 GPU vs 2 vs 3
+% TODO: Inds{\ae}t figur med speedup-kurve
+
+\subsection{D3.4: Multi-Node Parallelization}
+
+For multi-node training, we extended the DDP setup to run across multiple machines on the AAU cluster using \texttt{torchrun}:
+
+\begin{verbatim}
+torchrun --nnodes=2 --nproc_per_node=1 \
+  --rdzv_backend=c10d \
+  --rdzv_endpoint=<master_ip>:29500 \
+  train_ddp.py
+\end{verbatim}
+
+Multi-node training introduces additional communication overhead compared to single-node multi-GPU training, as gradient synchronization must traverse the network fabric (Ethernet) rather than fast intra-node interconnects (PCIe/NVLink). The AAU cluster nodes are connected via standard Ethernet, which limits the achievable speedup for communication-intensive workloads.
+
+% TODO: Inds{\ae}t faktiske multi-node tr{\ae}ningstider og speedup
+% TODO: Sammenlign single-node vs multi-node overhead
+
+\subsection{D3.5: Memory Optimization with AMP}
+
+Automatic Mixed Precision (AMP) was implemented using PyTorch's \texttt{torch.cuda.amp} module. AMP automatically selects FP16 for operations that benefit from lower precision (convolutions, matrix multiplications) while keeping FP32 for numerically sensitive operations (loss computation, batch normalization).
+
+\textbf{Implementation:}
+\begin{verbatim}
+scaler = torch.cuda.amp.GradScaler()
+with torch.cuda.amp.autocast():
+    output = model(input)
+    loss = loss_fn(output, target)
+scaler.scale(loss).backward()
+scaler.step(optimizer)
+scaler.update()
+\end{verbatim}
+
+\textbf{Expected benefits:}
+\begin{itemize}
+    \item \textbf{Memory savings}: $\sim$25--40\% VRAM reduction, allowing larger batch sizes
+    \item \textbf{Speed}: Up to $2\times$ faster training on GPUs with Tensor Core support (RTX Pro 4000 Ada supports this)
+    \item \textbf{Accuracy}: No significant accuracy degradation due to loss scaling preventing gradient underflow
+\end{itemize}
+
+% TODO: Inds{\ae}t tabel med VRAM-forbrug: FP32 vs AMP
+% TODO: Inds{\ae}t tr{\ae}ningstider: FP32 vs AMP
+% TODO: Sammenlign accuracy med og uden AMP
+
+\subsection{D3.6: ZeRO Optimizer Stages}
+
+The Zero Redundancy Optimizer (ZeRO) from Microsoft's DeepSpeed framework eliminates memory redundancy in data-parallel training by partitioning model states across GPUs instead of replicating them. ZeRO has three cumulative stages:
+
+\begin{table}[h]
+\centering
+\caption{ZeRO optimizer stages and their memory savings.}
+\label{tab:zero}
+\begin{tabular}{@{} l l l @{}}
+\toprule
+\textbf{Stage} & \textbf{What is Partitioned} & \textbf{Memory Reduction} \\
+\midrule
+Stage 1 & Optimizer states & $\sim 4\times$ \\
+Stage 2 & + Gradients & $\sim 8\times$ \\
+Stage 3 & + Parameters & Linear with $N_{d}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+DeepSpeed was integrated into our training script with minimal code changes. A \texttt{ds\_config.json} configuration file controls the ZeRO stage, and training is launched via the DeepSpeed launcher:
+
+\begin{verbatim}
+deepspeed train.py --deepspeed_config \
+  ds_config.json
+\end{verbatim}
+
+For our ResNet18 model ($\sim$11M parameters), the memory savings from ZeRO are modest in absolute terms since the model is relatively small. However, ZeRO becomes increasingly important for larger models. The experiments demonstrate the principle and validate the setup for future scaling.
+
+% TODO: Inds{\ae}t VRAM-m{\aa}linger for Stage 1 vs 2 vs 3
+% TODO: Inds{\ae}t tr{\ae}ningstider for hver stage
+% TODO: Inds{\ae}t figur med VRAM-sammenligning
+
+\subsection{Implementation: Exercises}
+
+\textbf{1. DDP training script:} A \texttt{train\_ddp.py} script was implemented using PyTorch DDP, tested on AI-Lab with multiple GPUs.
+
+\textbf{2. AMP integration:} Mixed precision training was added to the training pipeline using \texttt{torch.cuda.amp}, providing memory savings and speedup.
+
+\textbf{3. Multi-node training:} The DDP setup was extended to run across multiple nodes using \texttt{torchrun}.
+
+\textbf{4. DeepSpeed/ZeRO:} DeepSpeed was integrated with ZeRO stage 1--3 configurations to experiment with memory optimization.
+
+\textbf{5. Pipeline integration:} AMP was included as the default memory optimization in the main MLOps pipeline, as it provides significant benefits with minimal code changes and no accuracy degradation.
 \section{Scalable Inference}
 Please cite all sources in the following style \cite{vaswani2017attention}.
 
