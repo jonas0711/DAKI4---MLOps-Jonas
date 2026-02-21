@@ -10,15 +10,15 @@
         D1.2  & Cats vs Dogs image classification using CNN on Microsoft Kaggle dataset (~25k images). DVC for data versioning. & Section~\ref{sec:intro} \\
         D1.3  & Key challenges: dependency management, data versioning with DVC, experiment tracking, model drift detection & Section~\ref{sec:intro} \\
         D1.4  & Model card documenting code, data, training environment, performance metrics, and limitations & Section~\ref{sec:appendix} \\
-        D2.1  &  & \\
-        D2.2  & Unit-test coverage 90\% & \\
-        D2.3  &  & e.g. Figure~\ref{fig:figure1}\\
-        D3.1  &  & e.g. Equation~\ref{eq:equation1}\\
-        D3.2  &  & \\
-        D3.3  &  & \\
-        D3.4  &  & \\
-        D3.5  &  & \\
-        D3.6  &  & \\
+        D2.1  & CI/CD pipeline via Jenkins on AAU cluster: commit triggers build, pre-commit checks, unit tests, training, evaluation, MLflow logging, and deployment. Full lineage tracked. & Section~\ref{sec:continuous-ml} \\
+        D2.2  & Unit tests cover data loading, model, training, and evaluation modules using pytest. & Section~\ref{sec:continuous-ml} \\
+        D2.3  & MLflow on AAU cluster tracks hyperparameters, metrics, and artifacts per run. Enables cross-run comparison. & Section~\ref{sec:continuous-ml} \\
+        D3.1  & Gustafson's Law ($a=0.15$): $2.70\times$ speedup on 3 GPUs with 90\% efficiency. & Section~\ref{sec:scalable-training} \\
+        D3.2  & Power-law scaling: halving test loss requires $\sim$1M$\times$ compute, $\sim$1500$\times$ data, or $\sim$9000$\times$ parameters. & Section~\ref{sec:scalable-training} \\
+        D3.3  & PyTorch DDP implemented for multi-GPU data parallelism with NCCL backend. & Section~\ref{sec:scalable-training} \\
+        D3.4  & Multi-node training via torchrun across AAU cluster nodes. & Section~\ref{sec:scalable-training} \\
+        D3.5  & AMP (FP16/FP32) yields $\sim$25--40\% VRAM savings and up to $2\times$ speedup. & Section~\ref{sec:scalable-training} \\
+        D3.6  & ZeRO Stage 1/2/3: $4\times$/$8\times$/linear memory reduction via DeepSpeed. & Section~\ref{sec:scalable-training} \\
         D4.1  &  & \\
         D4.2  &  & \\
         D4.3  &  & \\
