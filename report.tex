@@ -157,73 +157,137 @@ This module covers Continuous Integration and Continuous Delivery (CI/CD) applie
 
 \subsection{D2.1: Continuous ML Pipeline Overview}
 
-The implemented CI/CD pipeline for our Cats vs Dogs project is orchestrated using Jenkins, running on the AAU MLOps cluster (\texttt{daki-storage}, \texttt{172.24.198.42:8080}). The pipeline is triggered by a Git commit to the project repository and proceeds through the following stages:
+The implemented CI/CD pipeline for our Cats vs Dogs project is orchestrated using Jenkins, running on the AAU MLOps cluster (\texttt{daki-storage}, \texttt{172.24.198.42:8080}). The pipeline is defined in a \texttt{Jenkinsfile} and triggered automatically when Jenkins detects new commits in the repository.
 
-\textbf{Pipeline stages:}
+\textbf{Pipeline stages (as defined in Jenkinsfile):}
 \begin{enumerate}
-    \item \textbf{Trigger}: A developer pushes a commit to the repository. Jenkins detects the new commit and assigns the job to an available GPU worker node (daki-master, daki-gpu1, or daki-gpu2).
-    \item \textbf{Pull}: The worker pulls the latest code from Git and the latest data version via DVC from the MinIO S3 storage (\texttt{s3://daki4-26-gr3/dvc}).
-    \item \textbf{Build}: A Docker container is built from a base image (stored in the local Docker Registry at \texttt{172.24.198.42:5000}) containing the required dependencies (PyTorch, CUDA, etc.). The container is tagged with the Git commit hash for traceability.
-    \item \textbf{Pre-commit checks}: Code quality is validated through pre-commit hooks including Flake8 linting (PEP8 compliance), detection of hardcoded secrets/API keys, and file size limits.
-    \item \textbf{Unit tests}: Automated tests verify core functionality---data loading, model architecture, training loop, and evaluation metrics---using \texttt{pytest}.
-    \item \textbf{Train}: If tests pass, the model is trained (short runs of a few epochs for CI purposes, following the fail-fast principle). Training hyperparameters are loaded from \texttt{configs/config.yaml}.
-    \item \textbf{Evaluate}: The trained model is automatically evaluated on the test set, computing accuracy, precision, recall, and F1-score.
-    \item \textbf{Log}: All hyperparameters, metrics, and model artifacts are logged to MLflow (\texttt{172.24.198.42:5050}) for experiment tracking and lineage.
-    \item \textbf{Register}: If the model meets predefined performance criteria, it is registered in the MLflow model registry.
-    \item \textbf{Deploy}: The model is packaged and deployed to an inference endpoint (Jetson Nano or a serving container).
+    \item \textbf{Lint}: Flake8 checks the \texttt{src/} directory for PEP8 compliance (\texttt{max-line-length=100}). If the code does not pass linting, the pipeline stops immediately (fail-fast principle).
+    \item \textbf{Test}: \texttt{pytest} runs all unit tests in \texttt{tests/} with coverage reporting (\texttt{--cov=src}). Test results are published as JUnit XML for Jenkins to display.
+    \item \textbf{Build \& Push Docker}: A Docker image is built from \texttt{Dockerfile} (based on \texttt{python:3.11-slim}) and tagged with both the Git commit hash (\texttt{\$\{GIT\_COMMIT\}}) and \texttt{latest}. Both tags are pushed to the local Docker Registry at \texttt{172.24.198.42:5000}.
+    \item \textbf{Fetch Data}: DVC pulls the versioned dataset from the MinIO S3 storage (\texttt{s3://daki4-26-gr3/dvc} on \texttt{172.24.198.42:9000}), ensuring the training always uses data consistent with the current code version.
+    \item \textbf{Train}: The model is trained via \texttt{python src/train.py --config configs/config.yaml} with MLflow tracking enabled. All hyperparameters and per-epoch metrics are logged to the MLflow server.
+    \item \textbf{Evaluate}: The trained model is evaluated on the test set via \texttt{python src/evaluate.py}, computing accuracy, precision, recall, and F1-score.
+    \item \textbf{Register Model}: On the \texttt{main} branch only, the pipeline queries the latest MLflow run. If accuracy $\geq$ 80\%, the model is registered in the MLflow Model Registry under the name \texttt{cats-vs-dogs-model}. If accuracy is below the threshold, the pipeline fails.
 \end{enumerate}
 
-\textbf{Branching strategy:} We follow a two-branch model with persistent \texttt{main} and \texttt{dev} branches. Feature branches are created for new functionality and merged into \texttt{dev} after passing all pipeline stages. Releases are merged from \texttt{dev} to \texttt{main}.
+In addition to the Jenkins pipeline, a \textbf{GitHub Actions CI workflow} (\texttt{.github/workflows/ci.yml}) runs on every push and pull request to \texttt{main} and \texttt{develop}. This workflow installs dependencies, runs all pre-commit hooks (\texttt{pre-commit run --all-files}), and executes the test suite. This provides a cloud-based safety net that complements the local Jenkins pipeline.
 
-\textbf{Lineage and tracking:} The pipeline provides full lineage from prediction back to source. Each MLflow run records the Git commit hash, DVC data version, hyperparameters, training metrics, and the model artifact. Docker images are tagged with commit hashes in the local registry, ensuring that any deployed model can be traced back to the exact code and data that produced it.
+\textbf{Local pre-commit hooks} (\texttt{.pre-commit-config.yaml}) also run before each commit on the developer's machine. These include: trailing whitespace removal, YAML validation, large file detection ($>$5\,MB), private key detection, merge conflict checks, secret scanning via \texttt{detect-secrets}, and Flake8 linting.
 
-% TODO: Tilf{\o}j flowchart-figur af pipeline
-% TODO: Tilf{\o}j screenshot af Jenkins pipeline
+\textbf{Branching strategy:} We use a three-branch model: \texttt{main} is the protected production branch, \texttt{development} is the persistent integration branch for new features, and temporary feature branches (e.g., \texttt{Peter}, \texttt{test-required-check}) are created for isolated work. Feature branches are merged into \texttt{development} and then into \texttt{main} after passing all pipeline stages. Branch protection is enabled on \texttt{main}, requiring a successful CI check (GitHub Actions) before merges are allowed. The Jenkins pipeline runs on all branches, but model registration only occurs on \texttt{main}.
+
+\textbf{Lineage and tracking:} The pipeline provides traceability through three systems working together:
+\begin{itemize}
+    \item \textbf{Git}: Versions all code. The commit hash is used as the Docker image tag, linking every container to its exact source code.
+    \item \textbf{DVC}: Versions the dataset via MinIO. Each \texttt{.dvc} file in Git links a code version to a specific data version.
+    \item \textbf{MLflow}: Tracks all experiment runs including hyperparameters (model name, learning rate, batch size, epochs, optimizer, seed), per-epoch metrics (train/val loss and accuracy), final best validation accuracy, and the model artifact (\texttt{best\_model.pt}).
+\end{itemize}
+
+Together, these ensure that any registered model can be traced back to the exact code, data, and configuration that produced it.
+
+\begin{figure}[h]
+    \centering
+    % TODO: Inds{\ae}t screenshot af Jenkins pipeline-view
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2cm}\textbf{PLACEHOLDER: Jenkins Pipeline View}\\Screenshot af Jenkins pipeline stages\vspace{2cm}}}
+    \caption{Jenkins CI/CD pipeline for the Cats vs Dogs project, showing the 7 stages from Lint to Register Model.}
+    \label{fig:jenkins-pipeline}
+\end{figure}
 
 \subsection{D2.2: Unit Test Code Coverage}
 
-Unit tests were implemented using \texttt{pytest} covering the core modules of the project:
+Unit tests were implemented using \texttt{pytest} covering the core modules of the project. A total of 8 tests are defined across two test files:
 
+\textbf{Model tests} (\texttt{tests/test\_model.py}, 2 tests):
 \begin{itemize}
-    \item \textbf{Data loading} (\texttt{data\_loader.py}): Tests verify correct dataset splitting (train/val/test), image transformation pipeline, and handling of corrupted images.
-    \item \textbf{Model} (\texttt{model.py}): Tests verify model instantiation, output shape for known input dimensions, and save/load functionality.
-    \item \textbf{Training} (\texttt{train.py}): Tests verify that a single training step reduces loss (sanity check), configuration loading, and checkpoint saving.
-    \item \textbf{Evaluation} (\texttt{evaluate.py}): Tests verify metric computation (accuracy, precision, recall, F1) against known inputs.
+    \item \texttt{test\_model\_output\_shape}: Verifies the model returns shape $(4, 2)$ for a batch of 4 images---confirming the binary classification head.
+    \item \texttt{test\_model\_save\_and\_load}: Saves a model checkpoint and reloads it, asserting all weights are identical.
 \end{itemize}
 
-% TODO: Inds{\ae}t screenshot af code coverage rapport
-% TODO: K{\o}r pytest --cov og inds{\ae}t faktisk coverage-procent
+\textbf{Data loader tests} (\texttt{tests/test\_data\_loader.py}, 6 tests):
+\begin{itemize}
+    \item \texttt{test\_is\_valid\_image\_with\_valid\_file}: Confirms valid images are accepted.
+    \item \texttt{test\_is\_valid\_image\_with\_corrupt\_file}: Confirms corrupt files are rejected.
+    \item \texttt{test\_dataset\_length}: Verifies the dataset reports the correct number of samples.
+    \item \texttt{test\_dataset\_returns\_correct\_label}: Checks that labels match the input.
+    \item \texttt{test\_dataset\_applies\_transform}: Ensures transforms produce a tensor of correct shape.
+    \item \texttt{test\_get\_transforms\_output\_shape}: Validates the transform pipeline output dimensions.
+\end{itemize}
+
+\textbf{Coverage results} (from \texttt{pytest tests/ --cov=src --cov-report=term-missing}):
+
+\begin{table}[h]
+\centering
+\caption{Unit test code coverage per module.}
+\label{tab:coverage}
+\begin{tabular}{@{} l r r r @{}}
+\toprule
+\textbf{Module} & \textbf{Lines} & \textbf{Covered} & \textbf{Coverage} \\
+\midrule
+\texttt{src/\_\_init\_\_.py} & 0 & 0 & 100\% \\
+\texttt{src/data\_loader.py} & 82 & 37 & 45\% \\
+\texttt{src/model.py} & 27 & 23 & 85\% \\
+\texttt{src/evaluate.py} & 58 & 0 & 0\% \\
+\texttt{src/train.py} & 87 & 0 & 0\% \\
+\midrule
+\textbf{Total} & \textbf{254} & \textbf{60} & \textbf{24\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The higher coverage for \texttt{model.py} (85\%) and partial coverage of \texttt{data\_loader.py} (45\%) reflects that we test the core functionality---model output shape, save/load, image validation, transforms, and the dataset class---without requiring the full dataset on disk. \texttt{train.py} and \texttt{evaluate.py} have 0\% unit test coverage because they require the complete dataset and a GPU to execute meaningfully; these modules are instead validated through integration testing in the Jenkins pipeline.
+
+\begin{figure}[h]
+    \centering
+    % TODO: Inds{\ae}t screenshot af coverage output fra terminal
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2cm}\textbf{PLACEHOLDER: Code Coverage Output}\\Screenshot af \texttt{pytest --cov} output fra terminal\vspace{2cm}}}
+    \caption{Code coverage report from \texttt{pytest tests/ --cov=src}, showing 8 passed tests and per-module coverage.}
+    \label{fig:coverage}
+\end{figure}
 
 \subsection{D2.3: Experiment Tracking}
 
-MLflow is used for experiment tracking, hosted on the AAU cluster at \texttt{http://172.24.198.42:5050}. Using \texttt{mlflow.pytorch.autolog()}, the following is automatically logged for each training run:
+MLflow is used for experiment tracking, hosted on the AAU cluster at \texttt{http://172.24.198.42:5050}. The training script (\texttt{src/train.py}) uses explicit MLflow API calls to log all relevant information for each training run:
 
 \begin{itemize}
-    \item Hyperparameters (learning rate, batch size, epochs, optimizer)
-    \item Training and validation loss per epoch
-    \item Evaluation metrics (accuracy, precision, recall, F1-score)
-    \item Model artifacts (saved model weights)
-    \item Git commit hash and DVC data version
+    \item \textbf{Parameters}: model name, pretrained flag, number of epochs, learning rate, optimizer type, batch size, image size, and random seed (via \texttt{mlflow.log\_params}).
+    \item \textbf{Per-epoch metrics}: training loss, training accuracy, validation loss, and validation accuracy---logged with the epoch number as step (via \texttt{mlflow.log\_metrics}).
+    \item \textbf{Final metric}: best validation accuracy across all epochs (via \texttt{mlflow.log\_metric}).
+    \item \textbf{Artifact}: the best model checkpoint (\texttt{best\_model.pt}) is uploaded as an MLflow artifact (via \texttt{mlflow.log\_artifact}).
 \end{itemize}
 
-This enables comparison between different runs and model versions directly in the MLflow UI, facilitating informed decisions about which model to promote to production.
+All runs are grouped under the experiment name \texttt{cats-vs-dogs}. The MLflow UI enables comparison between different runs and model versions, facilitating informed decisions about which model to promote to production.
 
-% TODO: Inds{\ae}t screenshot af MLflow dashboard med eksperimenter
-% TODO: Inds{\ae}t screenshot af metriks-sammenligning mellem runs
+\begin{figure}[h]
+    \centering
+    % TODO: Inds{\ae}t screenshot af MLflow experiment-oversigt
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2cm}\textbf{PLACEHOLDER: MLflow Experiment Overview}\\Screenshot af MLflow UI med experiment runs for cats-vs-dogs\vspace{2cm}}}
+    \caption{MLflow experiment tracking dashboard showing logged runs for the cats-vs-dogs experiment.}
+    \label{fig:mlflow-experiments}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    % TODO: Inds{\ae}t screenshot af metriks-sammenligning
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2cm}\textbf{PLACEHOLDER: MLflow Metrics Comparison}\\Screenshot af metrik-sammenligning mellem runs (accuracy, loss kurver)\vspace{2cm}}}
+    \caption{Comparison of training metrics across different MLflow runs, showing hyperparameter impact on model performance.}
+    \label{fig:mlflow-comparison}
+\end{figure}
 
 \subsection{Implementation: Exercises}
 
-\textbf{1. Branching:} A \texttt{dev} branch was created alongside the existing \texttt{main} branch. Feature branches are used for isolated development of new features.
+\textbf{1. Branching:} A persistent \texttt{development} branch was created alongside \texttt{main}. Feature branches (e.g., \texttt{Peter}, \texttt{test-required-check}) are used for isolated development and merged via pull requests.
 
-\textbf{2. Pre-commits:} A \texttt{.pre-commit-config.yaml} was configured with hooks for Flake8 (PEP8 linting), detection of large files, and checks for hardcoded credentials.
+\textbf{2. Pre-commits:} A \texttt{.pre-commit-config.yaml} was configured with 8 hooks: trailing whitespace, end-of-file fixer, YAML validation, large file detection ($>$5\,MB), private key detection, merge conflict checks, secret scanning (\texttt{detect-secrets}), and Flake8 linting.
 
-\textbf{3. Unit tests:} Tests were written for all core modules using \texttt{pytest}, covering data loading, model architecture, training, and evaluation.
+\textbf{3. Unit tests:} 8 tests were written for the \texttt{model.py} and \texttt{data\_loader.py} modules using \texttt{pytest}, covering model output shape, save/load, image validation, dataset operations, and transforms.
 
-\textbf{4. CI/CD with Jenkins:} Jenkins was configured on the AAU cluster to orchestrate the pipeline. A \texttt{Jenkinsfile} defines the pipeline stages: build, test, train, evaluate, log, and deploy.
+\textbf{4. CI/CD with Jenkins + GitHub Actions:} Jenkins was configured on the AAU cluster (\texttt{172.24.198.42:8080}) to orchestrate the full ML pipeline. A \texttt{Jenkinsfile} defines 7 stages: Lint, Test, Build \& Push Docker, Fetch Data, Train, Evaluate, and Register Model. Additionally, a GitHub Actions workflow (\texttt{.github/workflows/ci.yml}) runs pre-commit hooks and tests on every push and pull request, serving as a lightweight cloud-based CI gate.
 
-\textbf{5. Docker:} A base Docker image with PyTorch and CUDA was created and pushed to the local registry. The CI pipeline builds on top of this base image, reducing build times significantly.
+\textbf{5. Docker:} A \texttt{Dockerfile} based on \texttt{python:3.11-slim} packages the source code and dependencies. The Jenkins pipeline builds the image and pushes it to the local Docker Registry (\texttt{172.24.198.42:5000}), tagged with the Git commit hash for traceability.
 
-\textbf{6. MLflow integration:} Experiment tracking was integrated into the training script using \texttt{mlflow.pytorch.autolog()}, logging all relevant metrics and artifacts to the cluster MLflow instance.
+\textbf{6. MLflow integration:} Experiment tracking was integrated into \texttt{train.py} using explicit MLflow API calls (\texttt{log\_params}, \texttt{log\_metrics}, \texttt{log\_metric}, \texttt{log\_artifact}), logging all hyperparameters, per-epoch metrics, and the best model checkpoint to the cluster MLflow instance.
+
+\textbf{7. Branch protection:} Branch protection was enabled on \texttt{main} via GitHub, requiring a successful CI status check (GitHub Actions) before pull requests can be merged. This ensures that broken code never reaches the production branch.
 
 \section{Scalable Training}\label{sec:scalable-training}
 
