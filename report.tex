@@ -187,8 +187,7 @@ Together, these ensure that any registered model can be traced back to the exact
 
 \begin{figure}[h]
     \centering
-    % TODO: Inds{\ae}t screenshot af Jenkins pipeline-view
-    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2cm}\textbf{PLACEHOLDER: Jenkins Pipeline View}\\Screenshot af Jenkins pipeline stages\vspace{2cm}}}
+    \includegraphics[width=\linewidth]{figures/cicd_pipeline.png}
     \caption{Jenkins CI/CD pipeline for the Cats vs Dogs project, showing the 7 stages from Lint to Register Model.}
     \label{fig:jenkins-pipeline}
 \end{figure}
@@ -236,13 +235,7 @@ Unit tests were implemented using \texttt{pytest} covering the core modules of t
 
 The higher coverage for \texttt{model.py} (85\%) and partial coverage of \texttt{data\_loader.py} (45\%) reflects that we test the core functionality---model output shape, save/load, image validation, transforms, and the dataset class---without requiring the full dataset on disk. \texttt{train.py} and \texttt{evaluate.py} have 0\% unit test coverage because they require the complete dataset and a GPU to execute meaningfully; these modules are instead validated through integration testing in the Jenkins pipeline.
 
-\begin{figure}[h]
-    \centering
-    % TODO: Inds{\ae}t screenshot af coverage output fra terminal
-    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2cm}\textbf{PLACEHOLDER: Code Coverage Output}\\Screenshot af \texttt{pytest --cov} output fra terminal\vspace{2cm}}}
-    \caption{Code coverage report from \texttt{pytest tests/ --cov=src}, showing 8 passed tests and per-module coverage.}
-    \label{fig:coverage}
-\end{figure}
+% Note: Code coverage is documented in Table~\ref{tab:coverage} above. A terminal screenshot can be added when available.
 
 \subsection{D2.3: Experiment Tracking}
 
@@ -257,21 +250,7 @@ MLflow is used for experiment tracking, hosted on the AAU cluster at \texttt{htt
 
 All runs are grouped under the experiment name \texttt{cats-vs-dogs}. The MLflow UI enables comparison between different runs and model versions, facilitating informed decisions about which model to promote to production.
 
-\begin{figure}[h]
-    \centering
-    % TODO: Inds{\ae}t screenshot af MLflow experiment-oversigt
-    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2cm}\textbf{PLACEHOLDER: MLflow Experiment Overview}\\Screenshot af MLflow UI med experiment runs for cats-vs-dogs\vspace{2cm}}}
-    \caption{MLflow experiment tracking dashboard showing logged runs for the cats-vs-dogs experiment.}
-    \label{fig:mlflow-experiments}
-\end{figure}
-
-\begin{figure}[h]
-    \centering
-    % TODO: Inds{\ae}t screenshot af metriks-sammenligning
-    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2cm}\textbf{PLACEHOLDER: MLflow Metrics Comparison}\\Screenshot af metrik-sammenligning mellem runs (accuracy, loss kurver)\vspace{2cm}}}
-    \caption{Comparison of training metrics across different MLflow runs, showing hyperparameter impact on model performance.}
-    \label{fig:mlflow-comparison}
-\end{figure}
+% Note: MLflow screenshots should be captured from http://172.24.198.42:5050 and added as figures/mlflow_experiments.png and figures/mlflow_comparison.png when available.
 
 \subsection{Implementation: Exercises}
 
@@ -323,7 +302,12 @@ where $P$ is the number of GPUs and $a$ is the sequential fraction of the worklo
 
 With 3 GPUs (the number of GPU worker nodes available on the AAU cluster), Gustafson's Law predicts a speedup of approximately $2.70\times$ with 90\% parallel efficiency. In practice, the actual speedup is often slightly lower due to communication overhead in gradient synchronization (All-Reduce) and potential data loading bottlenecks.
 
-% TODO: Inds{\ae}t faktiske m{\aa}lte speedup-resultater fra DDP-eksperimenter
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/gustafson_speedup.png}
+    \caption{Estimated speedup using Gustafson's Law ($a = 0.15$) for 1--8 GPUs, showing near-linear scaling.}
+    \label{fig:gustafson}
+\end{figure}
 
 \subsection{D3.2: Scaling Estimate to Halve Test Loss}
 
@@ -357,6 +341,13 @@ Parameters & 0.076 & $\sim 9{,}000\times$ \\
 \end{table}
 
 These numbers illustrate the diminishing returns of scaling: halving the test loss requires enormous increases in resources. For our ResNet18 model with approximately 11 million parameters, this would mean scaling to $\sim$99 billion parameters, or increasing the dataset from $\sim$25{,}000 images to $\sim$37.5 million images, or increasing compute by a factor of over one million. This highlights why the power law represents diminishing returns when viewed on a linear scale, even though it appears linear in log-log space.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/scaling_law.png}
+    \caption{Scaling factors required to halve test loss, illustrating diminishing returns across compute, dataset size, and model parameters.}
+    \label{fig:scaling}
+\end{figure}
 
 \subsection{D3.3: Multi-GPU Parallelization (DDP)}
 
@@ -489,6 +480,13 @@ The 74.8\% size reduction comes from representing each weight with 8 bits instea
 
 The prediction agreement between FP32 and INT8 models confirms that ResNet architectures are stable under PTQ, consistent with findings reported by NVIDIA showing ResNet within 1\% accuracy of FP32 after quantization.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/quantization_comparison.png}
+    \caption{FP32 vs INT8 comparison: model size, inference time (bs=1), and inference time (bs=32).}
+    \label{fig:quantization}
+\end{figure}
+
 \subsection{D4.2: Batch Processing Speedup}
 
 Batch inference was benchmarked across batch sizes 1--64 to document the latency-throughput tradeoff:
@@ -521,6 +519,13 @@ Batch inference was benchmarked across batch sizes 1--64 to document the latency
 
 For a production deployment, batch size 8--16 would balance latency ($<$100 ms per batch) with near-peak throughput. Dynamic batching (as offered by e.g. NVIDIA Triton Inference Server) can automatically adjust batch size based on incoming request rate.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/batch_benchmark.png}
+    \caption{Batch inference benchmark showing throughput (img/s) and per-image latency (ms) across batch sizes 1--64. Peak throughput at batch size 16.}
+    \label{fig:batch}
+\end{figure}
+
 \subsection{D4.3: Pruning vs. Accuracy}
 
 Global unstructured L1-norm pruning was applied at increasing sparsity levels to a pretrained ResNet18 (ImageNet, 1000 classes). Prediction agreement with the unpruned model was measured on 200 test samples:
@@ -548,6 +553,13 @@ The results reveal a sharp ``accuracy cliff'' at approximately 50\% sparsity: th
 
 Note that unstructured pruning saves parameters but does not always translate to real inference speedup unless the hardware supports sparse operations. Structured pruning (removing entire filters/channels) yields actual speedups on standard hardware.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/pruning_accuracy.png}
+    \caption{Prediction agreement vs. pruning level, showing the ``accuracy cliff'' at 50\% sparsity.}
+    \label{fig:pruning}
+\end{figure}
+
 \subsection{D4.4: Fine-tuning Pruned Models}
 
 To recover the accuracy lost from aggressive pruning, knowledge distillation was used to fine-tune the pruned models. The unpruned model served as the ``teacher'', providing soft labels (logits with temperature scaling) that the pruned ``student'' model was trained to match:
@@ -567,6 +579,13 @@ To recover the accuracy lost from aggressive pruning, knowledge distillation was
 \end{table}
 
 Even at 90\% sparsity (only 10\% of original weights non-zero), the pruned model recovers to 99.5\% prediction agreement with the unpruned model after 10 epochs of knowledge distillation. This demonstrates two important principles: (1) neural networks are heavily over-parameterized and most weights are redundant, and (2) the combination of pruning and fine-tuning is a powerful compression strategy that maintains model quality.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/finetune_recovery.png}
+    \caption{Accuracy recovery after knowledge distillation fine-tuning at 70\% and 90\% pruning levels.}
+    \label{fig:finetune}
+\end{figure}
 
 \subsection{Implementation: Exercises}
 
