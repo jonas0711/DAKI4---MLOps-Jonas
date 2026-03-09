@@ -19,12 +19,12 @@
         D3.4  & Multi-node training via torchrun across AAU cluster nodes. & Section~\ref{sec:scalable-training} \\
         D3.5  & AMP (FP16/FP32) yields $\sim$25--40\% VRAM savings and up to $2\times$ speedup. & Section~\ref{sec:scalable-training} \\
         D3.6  & ZeRO Stage 1/2/3: $4\times$/$8\times$/linear memory reduction via DeepSpeed. & Section~\ref{sec:scalable-training} \\
-        D4.1  &  & \\
-        D4.2  &  & \\
-        D4.3  &  & \\
-        D4.4  &  & \\
-        D5.1  &  & \\
-        D5.2  &  & \\
+        D4.1  & Static PTQ: 74.8\% size reduction (42.7$\to$10.8 MB), 11.3$\times$ CPU speedup (bs=1), 100\% prediction agreement. & Section~\ref{sec:scalable-inference} \\
+        D4.2  & Peak throughput at bs=16 (170.8 img/s). Saturates due to CPU cache limits. Compute-bound up to bs=16, memory-bound beyond. & Section~\ref{sec:scalable-inference} \\
+        D4.3  & L1 global pruning: stable up to 40\% (97.5\% agreement), cliff at 50\% (14\%), collapse at 60\%+. & Section~\ref{sec:scalable-inference} \\
+        D4.4  & Knowledge distillation recovers 99.5\% agreement even at 90\% sparsity after 10 epochs fine-tuning. & Section~\ref{sec:scalable-inference} \\
+        D5.1  & ResNet50 ONNX quantized FP32$\to$UInt8 and deployed on Samsung Galaxy phone. & Section~\ref{sec:deployment} \\
+        D5.2  & Endpoint testing: functional (pytest/Postman), robustness (invalid inputs), performance (Locust), security (rate limiting, ZAP). Safeguards: confidence thresholds, input validation. & Section~\ref{sec:deployment} \\
         D6.1  &  & \\
         D6.2  &  & \\
         D6.3  &  & \\
