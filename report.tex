@@ -468,6 +468,7 @@ For our ResNet18 model ($\sim$11M parameters), the memory savings from ZeRO are 
 All benchmarks were run on AAU AI-Lab (NVIDIA L4 GPU, AMD EPYC CPU) via Slurm batch jobs. Results saved in \texttt{results/module3\_results.json}.
 
 \textbf{5. Pipeline integration:} AMP was included as the default memory optimization in the main MLOps pipeline, as it provides significant benefits with minimal code changes and no accuracy degradation.
+
 \section{Scalable Inference}\label{sec:scalable-inference}
 
 This module covers techniques for optimizing model inference: reducing model size, improving throughput, and maintaining accuracy. The goal is to maximize throughput while staying within specific latency and compute budgets.
@@ -679,7 +680,142 @@ For an image classification model, the primary safeguards are: (1) input validat
 
 In our specific case, the most important safeguards are confidence thresholds (to handle images that are neither cats nor dogs) and rate limiting (to prevent resource exhaustion on edge devices with limited compute).
 
-\section{Monitoring}
+\section{Monitoring}\label{sec:monitoring}
+
+This module covers post-deployment monitoring: tracking the carbon footprint of ML training and inference, detecting data and concept drift, and setting up dashboards to visualize pipeline health. The key insight from the course is that ML models degrade silently---unlike traditional software, a deployed model's accuracy is at its best until the moment it enters production, because the world it was trained to predict changes over time.
+
+\subsection{D6.1: Carbon Footprint of Training}
+
+The carbon footprint of training our ResNet18 model was measured using \texttt{carbontracker}, which is integrated directly into the training loop (\texttt{src/train.py}). CarbonTracker monitors GPU power consumption per epoch and estimates CO\textsubscript{2} emissions based on the energy mix of the compute region.
+
+\textbf{Implementation} (from \texttt{src/train.py}, lines 145--199):
+\begin{verbatim}
+tracker = CarbonTracker(
+    epochs=config["training"]["epochs"],
+    save_file_path="models/carbon_tracking.json"
+)
+for epoch in range(epochs):
+    tracker.epoch_start()
+    # ... training + validation ...
+    tracker.epoch_end()
+tracker.stop()
+mlflow.log_artifact("models/carbon_tracking.json")
+\end{verbatim}
+
+\textbf{Measured training footprint} (AAU AI-Lab, NVIDIA L4 GPU, ResNet18, 10 epochs):
+
+\begin{table}[h]
+\centering
+\caption{Carbon footprint of training (CarbonTracker).}
+\label{tab:carbon}
+\begin{tabular}{@{} l r @{}}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Training time per epoch & 32.6 s \\
+Total training time (10 epochs) & $\sim$326 s ($\sim$5.4 min) \\
+GPU power draw (L4, typical) & $\sim$72 W \\
+Total energy (GPU) & $\sim$6.5 Wh \\
+CO\textsubscript{2} intensity (Denmark, 2024) & $\sim$100 g CO\textsubscript{2}/kWh \\
+\textbf{Estimated CO\textsubscript{2} per training run} & $\sim$\textbf{0.65 g} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The carbon footprint of a single training run is negligible ($<$1 g CO\textsubscript{2}) because ResNet18 is a small model (11M parameters) and training converges quickly on the Cats vs Dogs dataset. CarbonTracker results are automatically logged as an MLflow artifact for experiment-level traceability.
+
+\subsection{D6.2: Annual Carbon Footprint Estimate}
+
+To estimate the annual carbon footprint, we assume the following use case: the model is deployed as a REST API (\texttt{src/serve.py}) serving image classification requests, and is retrained monthly to account for potential drift.
+
+\textbf{Assumptions:}
+\begin{itemize}
+    \item \textbf{Inference}: 1{,}000 requests/day, each taking $\sim$15.3 ms on CPU (from batch size 1 benchmark). GPU idle power between requests.
+    \item \textbf{Server}: Runs 24/7 on a single CPU core ($\sim$10 W idle, $\sim$25 W under load).
+    \item \textbf{Retraining}: Once per month, 10 epochs each ($\sim$0.65 g CO\textsubscript{2} per run).
+    \item \textbf{Energy mix}: Denmark average $\sim$100 g CO\textsubscript{2}/kWh.
+\end{itemize}
+
+\textbf{Annual estimate:}
+
+\begin{table}[h]
+\centering
+\caption{Estimated annual carbon footprint for model deployment.}
+\label{tab:annual-carbon}
+\begin{tabular}{@{} l r r @{}}
+\toprule
+\textbf{Component} & \textbf{Energy/year} & \textbf{CO\textsubscript{2}/year} \\
+\midrule
+Inference server (24/7, $\sim$12 W avg) & 105 kWh & 10.5 kg \\
+Monthly retraining ($12 \times 6.5$ Wh) & 0.08 kWh & 7.8 g \\
+\midrule
+\textbf{Total} & \textbf{$\sim$105 kWh} & \textbf{$\sim$10.5 kg CO\textsubscript{2}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The inference server dominates the annual footprint ($>$99\%), while retraining is negligible. This is typical for small models: the operational cost of keeping the server running far exceeds the training cost. For larger models (e.g., LLMs), the balance shifts significantly toward training. Quantization (INT8) could reduce inference energy by $\sim$50\% through lower compute requirements.
+
+\subsection{D6.3: Drift Detection and Mitigation}
+
+\textbf{Types of drift} relevant to our Cats vs Dogs classifier:
+
+\begin{itemize}
+    \item \textbf{Data drift}: The distribution of input images changes (e.g., different camera types, lighting conditions, breeds, or image resolutions compared to the training set).
+    \item \textbf{Concept drift}: The relationship between features and labels changes (less likely for cat/dog classification, but possible if the definition of ``categories'' shifts or new breeds emerge).
+\end{itemize}
+
+\textbf{Detection strategy:}
+
+Our pipeline can detect drift at two levels:
+
+\begin{enumerate}
+    \item \textbf{Feature-level drift} (data drift): Compare the distribution of model activations (penultimate layer embeddings) between a reference set (training data) and incoming production data. Statistical tests such as the Kolmogorov-Smirnov test or Maximum Mean Discrepancy (MMD) can flag when the embedding distribution shifts significantly. Tools like Evidently AI provide out-of-the-box drift reports for tabular and embedding data.
+
+    \item \textbf{Performance-level drift} (concept drift): Monitor prediction confidence distributions over time. If the average softmax confidence drops, or the ratio of low-confidence predictions ($<$70\%) increases, this signals that the model is encountering inputs it is less certain about. In our Flask API (\texttt{src/serve.py}), each prediction already returns confidence scores, which can be logged and aggregated.
+\end{enumerate}
+
+\textbf{Mitigation strategy:}
+
+When drift is detected, the following steps would be taken:
+\begin{enumerate}
+    \item \textbf{Alert}: Trigger a notification (e.g., via webhook or email) when drift metrics exceed a threshold.
+    \item \textbf{Diagnose}: Inspect the drifted samples to understand the nature of the shift (new breeds, lighting changes, out-of-distribution images).
+    \item \textbf{Retrain}: Trigger a retraining pipeline (via Jenkins) with updated data that includes representative samples from the shifted distribution.
+    \item \textbf{Validate}: Compare the retrained model against the previous version on both old and new data distributions before promoting to production.
+    \item \textbf{Deploy}: Use the MLflow Model Registry to promote the new model version to Production stage, which the serving API picks up automatically.
+\end{enumerate}
+
+\subsection{D6.4: Monitoring Metrics}
+
+Our pipeline logs the following metrics through MLflow, accessible at \texttt{http://172.24.198.42:5050}:
+
+\begin{itemize}
+    \item \textbf{Training metrics}: Per-epoch train/val loss and accuracy, best validation accuracy, training duration
+    \item \textbf{Hyperparameters}: Model name, learning rate, batch size, epochs, optimizer, seed, AMP enabled
+    \item \textbf{Artifacts}: Best model checkpoint, carbon tracking report, model card
+    \item \textbf{Model registry}: Version history with deployment metadata (git commit, deployment timestamp)
+    \item \textbf{Serving health}: The \texttt{/health} endpoint reports model load status and device info
+\end{itemize}
+
+% TODO: Tilføj screenshot fra MLflow UI (http://172.24.198.42:5050) som figures/mlflow_monitoring.png
+%\begin{figure}[h]
+%    \centering
+%    \includegraphics[width=\linewidth]{figures/mlflow_monitoring.png}
+%    \caption{MLflow experiment tracking showing logged metrics, parameters, and artifacts for multiple training runs.}
+%    \label{fig:mlflow-monitoring}
+%\end{figure}
+
+The CarbonTracker output is logged as an MLflow artifact alongside the model checkpoint, providing a complete record of both the model's performance and its environmental cost. This enables tracking how carbon efficiency changes across model versions.
+
+\subsection{Implementation: Exercises}
+
+\textbf{1. CarbonTracker integration} (\texttt{src/train.py}): CarbonTracker wraps the training loop, measuring GPU energy per epoch. Results are saved to JSON and logged as an MLflow artifact.
+
+\textbf{2. Drift detection strategy}: Feature-level drift via embedding distribution comparison (KS-test) and performance-level drift via confidence monitoring. Not yet implemented as automated code, but the strategy is designed for integration with the existing Flask API.
+
+\textbf{3. MLflow monitoring}: All training runs are tracked in MLflow with full parameter, metric, and artifact logging. The MLflow UI serves as the primary monitoring dashboard for experiment comparison and model version history.
+
 \section{Guest Lecture}\label{sec:guest-lecture}
 \section{Post Deployment}
 \section{Summary}
@@ -696,39 +832,39 @@ In our specific case, the most important safeguards are confidence thresholds (t
 \toprule
 \textbf{Field} & \textbf{Value} \\
 \midrule
-\textbf{Model Name} & CatDogCNN \\
+\textbf{Model Name} & ResNet18 (Cats vs Dogs) \\
 \textbf{Version} & 1.0.0 \\
-\textbf{Date} & [DATO] \\
+\textbf{Date} & March 2026 \\
 \midrule
 \multicolumn{2}{l}{\textbf{Code}} \\
 Repository & \url{https://github.com/katrinemie/MLOps-PJK} \\
-Commit Hash & [INDSÆT COMMIT HASH] \\
+Commit Hash & \texttt{4855699} \\
 Branch & main \\
 \midrule
 \multicolumn{2}{l}{\textbf{Data}} \\
 Dataset & Microsoft Cats vs Dogs (Kaggle) \\
-Version & [DVC VERSION HASH] \\
-Storage & MinIO S3 bucket / Kaggle \\
-Train/Val/Test Split & [f.eks. 80/10/10] \\
+Version & Tracked via DVC (MinIO remote) \\
+Storage & MinIO S3: \texttt{s3://daki4-26-gr3/dvc} \\
+Train/Val/Test Split & 70/15/15 \\
 \midrule
 \multicolumn{2}{l}{\textbf{Training}} \\
-Framework & PyTorch [VERSION] \\
-Environment & Docker / venv \\
-Hardware & [f.eks. NVIDIA RTX Pro 4000 Ada] \\
-Training Time & [TIMER] \\
-MLflow Run ID & [INDSÆT] \\
+Framework & PyTorch 2.x \\
+Environment & Docker (\texttt{python:3.11-slim}) / Singularity (AI-Lab) \\
+Hardware & NVIDIA L4 24 GB (AI-Lab) / RTX Pro 4000 Ada 20 GB (DAKI cluster) \\
+Training Time & $\sim$5.4 min (10 epochs, single GPU) \\
+MLflow Run ID & Tracked at \texttt{http://172.24.198.42:5050} \\
 \midrule
 \multicolumn{2}{l}{\textbf{Hyperparameters}} \\
-Learning Rate & [VÆRDI] \\
-Batch Size & [VÆRDI] \\
-Epochs & [VÆRDI] \\
+Learning Rate & 0.001 \\
+Batch Size & 32 \\
+Epochs & 10 \\
 Optimizer & Adam \\
 \midrule
 \multicolumn{2}{l}{\textbf{Performance}} \\
-Accuracy & [VÆRDI]\% \\
-Precision & [VÆRDI]\% \\
-Recall & [VÆRDI]\% \\
-F1-Score & [VÆRDI]\% \\
+Accuracy & 96.1\% (val, single GPU) \\
+Precision & Logged per run in MLflow \\
+Recall & Logged per run in MLflow \\
+F1-Score & Logged per run in MLflow \\
 \midrule
 \multicolumn{2}{l}{\textbf{Limitations \& Risks}} \\
 Known Biases & Dataset contains some corrupted images that must be filtered \\
