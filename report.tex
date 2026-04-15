@@ -48,7 +48,7 @@
 \author{Jonas\\
 Student number: 20244294\\
 Student e-mail: jingvo24@student.aau.dk\\
-MLOps pipeline Github link: \url{https://github.com/katrinemie/MLOps-PJK}
+MLOps pipeline Github link: \url{https://github.com/katrinemie/MLOps-JKP}
 }
 \maketitle
 
@@ -91,7 +91,7 @@ For this course, I have selected \textbf{Cats vs Dogs Image Classification} as t
 
 The dataset is downloaded via a custom script using the KaggleHub API, ensuring reproducible data acquisition. Data versioning is handled through DVC (Data Version Control), which is already configured in the project repository.
 
-The project repository is available at: \url{https://github.com/katrinemie/MLOps-PJK}
+The project repository is available at: \url{https://github.com/katrinemie/MLOps-JKP}
 
 \subsection{D1.3: Foreseen Challenges}
 Based on the selected project, I anticipate the following challenges in developing and maintaining the MLOps pipeline:
@@ -150,13 +150,13 @@ The base deep-learning project was initialized with the following structure:
 Configuration files using YAML format were created to manage hyperparameters, ensuring no hardcoded values in the training scripts. This enables reproducible experiments and easy hyperparameter tuning.
 
 % SCREENSHOT PLACEHOLDER: GitHub repo overblik + configs/config.yaml
-% Tag screenshot af: https://github.com/katrinemie/MLOps-PJK (repo forsiden)
+% Tag screenshot af: https://github.com/katrinemie/MLOps-JKP (repo forsiden)
 % og configs/config.yaml indhold (hyperparametre: model, learning_rate, batch_size, epochs, seed)
 \begin{figure}[h]
     \centering
     % \includegraphics[width=\linewidth]{figures/github_repo_overview.png}
-    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af GitHub repo (katrinemie/MLOps-PJK) forsiden med mappestruktur og README\vspace{2em}}}
-    \caption{GitHub repository overview for the MLOps-PJK project showing the project structure, branches, and recent commits.}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af GitHub repo (katrinemie/MLOps-JKP) forsiden med mappestruktur og README\vspace{2em}}}
+    \caption{GitHub repository overview for the MLOps-JKP project showing the project structure, branches, and recent commits.}
     \label{fig:github-repo}
 \end{figure}
 
@@ -266,7 +266,7 @@ Unit tests were implemented using \texttt{pytest} covering the core modules of t
 The higher coverage for \texttt{model.py} (85\%) and partial coverage of \texttt{data\_loader.py} (45\%) reflects that we test the core functionality---model output shape, save/load, image validation, transforms, and the dataset class---without requiring the full dataset on disk. \texttt{train.py} and \texttt{evaluate.py} have 0\% unit test coverage because they require the complete dataset and a GPU to execute meaningfully; these modules are instead validated through integration testing in the Jenkins pipeline.
 
 % SCREENSHOT PLACEHOLDER: pytest coverage output
-% Kør: cd MLOps-PJK && pytest tests/ --cov=src --cov-report=term-missing
+% Kør: cd MLOps-JKP && pytest tests/ --cov=src --cov-report=term-missing
 % Tag screenshot af terminal output med coverage-tabel (8 passed, 24% total coverage)
 \begin{figure}[h]
     \centering
@@ -756,18 +756,20 @@ This module covers post-deployment monitoring: tracking the carbon footprint of 
 
 The carbon footprint of training our ResNet18 model was measured using \texttt{carbontracker}, which is integrated directly into the training loop (\texttt{src/train.py}). CarbonTracker monitors GPU power consumption per epoch and estimates CO\textsubscript{2} emissions based on the energy mix of the compute region.
 
-\textbf{Implementation} (from \texttt{src/train.py}, lines 145--199):
+\textbf{Implementation} (from \texttt{src/train.py}):
 \begin{verbatim}
 tracker = CarbonTracker(
     epochs=config["training"]["epochs"],
-    save_file_path="models/carbon_tracking.json"
+    log_dir=str(model_dir),
 )
 for epoch in range(epochs):
     tracker.epoch_start()
     # ... training + validation ...
     tracker.epoch_end()
 tracker.stop()
-mlflow.log_artifact("models/carbon_tracking.json")
+# log carbon output files as mlflow artifacts
+for clog in glob.glob(str(model_dir / "*carbontracker*")):
+    mlflow.log_artifact(clog)
 \end{verbatim}
 
 \textbf{Measured training footprint} (AAU AI-Lab, NVIDIA L4 GPU, ResNet18, 10 epochs):
@@ -923,7 +925,7 @@ The CarbonTracker output is logged as an MLflow artifact alongside the model che
 \textbf{Date} & March 2026 \\
 \midrule
 \multicolumn{2}{l}{\textbf{Code}} \\
-Repository & \url{https://github.com/katrinemie/MLOps-PJK} \\
+Repository & \url{https://github.com/katrinemie/MLOps-JKP} \\
 Commit Hash & \texttt{4855699} \\
 Branch & main \\
 \midrule
