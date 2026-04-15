@@ -25,7 +25,7 @@
         D4.4  & Knowledge distillation recovers 99.5\% agreement even at 90\% sparsity after 10 epochs fine-tuning. & Section~\ref{sec:scalable-inference} \\
         D5.1  & ResNet50 ONNX quantized FP32$\to$UInt8 and deployed on Samsung Galaxy phone. & Section~\ref{sec:deployment} \\
         D5.2  & Endpoint testing: functional (pytest/Postman), robustness (invalid inputs), performance (Locust), security (rate limiting, ZAP). Safeguards: confidence thresholds, input validation. & Section~\ref{sec:deployment} \\
-        D6.1  & CarbonTracker integrated in training loop. ResNet18 training: $\sim$0.65 g CO\textsubscript{2} per run (10 epochs, NVIDIA L4). & Section~\ref{sec:monitoring} \\
+        D6.1  & CarbonTracker measured: 1.06 g CO\textsubscript{2} per training run (10 epochs, 5:18 min, 0.0074 kWh, 143.3 gCO\textsubscript{2}/kWh). & Section~\ref{sec:monitoring} \\
         D6.2  & Annual estimate: $\sim$0.23 kg CO\textsubscript{2} (52 weekly retrainings, 2.13 kWh total). Equivalent to 1.9 km car driving. Total cost \$28.46/year. & Section~\ref{sec:monitoring} \\
         D6.3  & Data drift via KS-test on feature distributions. Concept drift via accuracy comparison with severity levels (low/moderate/high/critical). & Section~\ref{sec:monitoring} \\
         D6.4  & MLflow dashboard tracks training metrics, hyperparameters, artifacts, and model versions. CarbonTracker logged as artifact. & Section~\ref{sec:monitoring} \\

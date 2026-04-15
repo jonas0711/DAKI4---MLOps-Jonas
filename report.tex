@@ -782,17 +782,16 @@ for clog in glob.glob(str(model_dir / "*carbontracker*")):
 \toprule
 \textbf{Metric} & \textbf{Value} \\
 \midrule
-Training time per epoch & 32.6 s \\
-Total training time (10 epochs) & $\sim$326 s ($\sim$5.4 min) \\
-GPU power draw (L4, typical) & $\sim$72 W \\
-Total energy (GPU) & $\sim$6.5 Wh \\
-CO\textsubscript{2} intensity (Denmark, 2024) & $\sim$100 g CO\textsubscript{2}/kWh \\
-\textbf{Estimated CO\textsubscript{2} per training run} & $\sim$\textbf{0.65 g} \\
+Total training time (10 epochs) & 5 min 18 s \\
+Total energy & 0.0074 kWh \\
+CO\textsubscript{2} intensity (measured) & 143.3 g CO\textsubscript{2}eq/kWh \\
+\textbf{CO\textsubscript{2} per training run} & \textbf{1.06 g} \\
+Car driving equivalent & 0.01 km \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The carbon footprint of a single training run is negligible ($<$1 g CO\textsubscript{2}) because ResNet18 is a small model (11M parameters) and training converges quickly on the Cats vs Dogs dataset. CarbonTracker results are automatically logged as an MLflow artifact for experiment-level traceability.
+The carbon footprint of a single training run is negligible ($\sim$1 g CO\textsubscript{2}) because ResNet18 is a small model (11M parameters) and training converges quickly on the Cats vs Dogs dataset. The measured CO\textsubscript{2} intensity of 143.3 g/kWh reflects the energy mix at the time of training. CarbonTracker results are automatically logged as an MLflow artifact for experiment-level traceability.
 
 \subsection{D6.2: Annual Carbon Footprint Estimate}
 
