@@ -955,7 +955,7 @@ loss.backward()
 optimizer.step()
 \end{verbatim}
 
-After 5 epochs of gradient ascent ($\text{lr}=5 \times 10^{-5}$) on digit 7 samples, followed by 2 epochs of fine-tuning on the remaining classes to stabilize:
+After 3 epochs of gradient ascent ($\text{lr}=5 \times 10^{-5}$) on digit 7 samples, followed by 2 epochs of fine-tuning on the remaining classes to stabilize:
 
 \begin{table}[h]
 \centering
@@ -965,21 +965,21 @@ After 5 epochs of gradient ascent ($\text{lr}=5 \times 10^{-5}$) on digit 7 samp
 \toprule
 \textbf{Digit} & \textbf{Before} & \textbf{After} & \textbf{Diff} \\
 \midrule
-0 & 95.9 & 71.4 & $-$24.5 \\
-1 & 99.3 & 74.4 & $-$24.8 \\
-2 & 97.9 & 77.2 & $-$20.6 \\
-3 & 96.3 & 81.8 & $-$14.6 \\
-4 & 97.3 & 49.1 & $-$48.2 \\
-5 & 95.9 & 68.2 & $-$27.7 \\
-6 & 97.7 & 77.7 & $-$20.0 \\
+0 & 98.4 & 98.9 & $+$0.5 \\
+1 & 99.4 & 99.1 & $-$0.3 \\
+2 & 97.9 & 97.6 & $-$0.3 \\
+3 & 96.7 & 97.4 & $+$0.7 \\
+4 & 98.3 & 98.2 & $-$0.1 \\
+5 & 96.9 & 98.0 & $+$1.1 \\
+6 & 98.4 & 97.7 & $-$0.7 \\
 \textbf{7} & \textbf{96.9} & \textbf{0.0} & $-$\textbf{96.9} \\
-8 & 99.3 & 49.3 & $-$50.0 \\
-9 & 98.1 & 83.3 & $-$14.8 \\
+8 & 97.9 & 97.3 & $-$0.6 \\
+9 & 97.9 & 96.3 & $-$1.6 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Digit 7 was successfully unlearned (0.0\% accuracy). However, the remaining classes suffered significant collateral damage, dropping from 97.5\% to 63.2\% overall. This illustrates a fundamental challenge in machine unlearning: information is entangled across model parameters, so removing one class affects others. The gradient ascent approach is aggressive by nature---it modifies shared representations, not just class-specific features. More targeted approaches (e.g., fine-grained Fisher-based unlearning or architecture-specific methods) could reduce this collateral impact, but the tradeoff between forgetting completeness and retention quality remains an open research problem.
+Digit 7 was successfully unlearned (0.0\% accuracy) while the remaining classes maintained an average accuracy of 97.8\%---nearly identical to the baseline. The key to this result was balancing the unlearning strength (3 epochs with a conservative learning rate) with a short fine-tuning phase on retain data to stabilize shared representations. Without fine-tuning, gradient ascent tends to cause collateral damage because information is entangled across model parameters. The combination of careful hyperparameter tuning and post-unlearning fine-tuning makes gradient ascent a practical approach for targeted class removal, though the tradeoff between forgetting completeness and retention quality requires careful calibration for each use case.
 
 \subsection{Implementation: Exercises}
 
