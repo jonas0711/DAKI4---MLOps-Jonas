@@ -905,7 +905,90 @@ The CarbonTracker output is logged as an MLflow artifact alongside the model che
 \textbf{3. MLflow monitoring}: All training runs are tracked in MLflow with full parameter, metric, and artifact logging. The MLflow UI serves as the primary monitoring dashboard for experiment comparison and model version history.
 
 \section{Guest Lecture}\label{sec:guest-lecture}
-\section{Post Deployment}
+
+\section{Post Deployment}\label{sec:post-deployment}
+
+This module covers techniques for managing deployed models over time: continual learning to handle new tasks without forgetting, and machine unlearning to selectively remove learned information. Both exercises use the MNIST digit classification dataset.
+
+\subsection{D7.1: Continual Learning --- Na\"ive vs. Replay + EWC}
+
+Catastrophic forgetting occurs when a neural network trained on new data loses its ability to perform on previously learned tasks. We demonstrate this effect and then mitigate it using experience replay combined with Elastic Weight Consolidation (EWC).
+
+\textbf{Setup:} A simple MLP (784$\to$256$\to$128$\to$10) was trained sequentially on two tasks:
+\begin{itemize}
+    \item \textbf{Task 1}: Digits 0--4 (5 epochs)
+    \item \textbf{Task 2}: Digits 5--9 (5 epochs)
+\end{itemize}
+
+\textbf{Na\"ive sequential training} (no replay): After training on Task 2, accuracy on digits 0--4 dropped from 99.2\% to 0.0\%---a complete catastrophic forgetting. The model could only classify new digits (98.4\% on 5--9), giving 47.8\% total accuracy.
+
+\textbf{Experience Replay + EWC}: A memory buffer of 500 samples from Task 1 was stored. During Task 2 training, these were replayed alongside new data. Additionally, EWC applied a regularization penalty ($\lambda=400$) that protects weights important for Task 1, estimated via the diagonal Fisher Information Matrix.
+
+\begin{table}[h]
+\centering
+\caption{Continual learning results on MNIST (accuracy \%).}
+\label{tab:continual}
+\begin{tabular}{@{} l r r r @{}}
+\toprule
+\textbf{Method} & \textbf{Digits 0--4} & \textbf{Digits 5--9} & \textbf{Total} \\
+\midrule
+After Task 1 only & 99.2 & -- & -- \\
+Na\"ive sequential & 0.0 & 98.4 & 47.8 \\
+Replay + EWC & 89.2 & 98.5 & 93.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Replay + EWC recovers 89.2\% accuracy on old digits while maintaining 98.5\% on new digits, demonstrating that the combination of a small memory buffer and weight regularization effectively mitigates catastrophic forgetting. The remaining gap from 99.2\% to 89.2\% on old digits reflects the inherent stability-plasticity tradeoff: some forgetting is unavoidable when adapting to new tasks with limited replay data.
+
+\subsection{D7.2: Machine Unlearning --- Gradient Ascent}
+
+Machine unlearning aims to selectively remove the influence of specific training data from a model without retraining from scratch. This is relevant for GDPR compliance (``right to be forgotten'') and removing biased or copyrighted content.
+
+\textbf{Setup:} A classifier was trained on full MNIST (0--9) achieving 97.5\% baseline accuracy. The goal was to make the model forget digit ``7'' while retaining performance on the remaining digits.
+
+\textbf{Method:} Gradient ascent unlearning maximizes the loss on the forget class, effectively pushing the model away from correctly classifying that digit:
+
+\begin{verbatim}
+loss = -criterion(model(x), y)  # maximize loss
+loss.backward()
+optimizer.step()
+\end{verbatim}
+
+After 5 epochs of gradient ascent ($\text{lr}=5 \times 10^{-5}$) on digit 7 samples, followed by 2 epochs of fine-tuning on the remaining classes to stabilize:
+
+\begin{table}[h]
+\centering
+\caption{Unlearning results: per-class accuracy (\%) before and after forgetting digit 7.}
+\label{tab:unlearning}
+\begin{tabular}{@{} c r r r @{}}
+\toprule
+\textbf{Digit} & \textbf{Before} & \textbf{After} & \textbf{Diff} \\
+\midrule
+0 & 95.9 & 71.4 & $-$24.5 \\
+1 & 99.3 & 74.4 & $-$24.8 \\
+2 & 97.9 & 77.2 & $-$20.6 \\
+3 & 96.3 & 81.8 & $-$14.6 \\
+4 & 97.3 & 49.1 & $-$48.2 \\
+5 & 95.9 & 68.2 & $-$27.7 \\
+6 & 97.7 & 77.7 & $-$20.0 \\
+\textbf{7} & \textbf{96.9} & \textbf{0.0} & $-$\textbf{96.9} \\
+8 & 99.3 & 49.3 & $-$50.0 \\
+9 & 98.1 & 83.3 & $-$14.8 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Digit 7 was successfully unlearned (0.0\% accuracy). However, the remaining classes suffered significant collateral damage, dropping from 97.5\% to 63.2\% overall. This illustrates a fundamental challenge in machine unlearning: information is entangled across model parameters, so removing one class affects others. The gradient ascent approach is aggressive by nature---it modifies shared representations, not just class-specific features. More targeted approaches (e.g., fine-grained Fisher-based unlearning or architecture-specific methods) could reduce this collateral impact, but the tradeoff between forgetting completeness and retention quality remains an open research problem.
+
+\subsection{Implementation: Exercises}
+
+\textbf{1. Continual learning} (\texttt{src/continual\_learning.py}): Three-stage experiment on MNIST demonstrating catastrophic forgetting and mitigation via experience replay (500-sample buffer) combined with EWC regularization ($\lambda=400$, diagonal Fisher Information Matrix).
+
+\textbf{2. Machine unlearning} (\texttt{src/unlearning.py}): Gradient ascent unlearning of digit 7 followed by retain fine-tuning. Demonstrates successful targeted forgetting with documented collateral damage to remaining classes.
+
+Both experiments were run on AAU AI-Lab (NVIDIA L4 GPU) via Slurm batch jobs (\texttt{scripts/run\_module7.sh}).
+
 \section{Summary}
 \input{summary}
 
