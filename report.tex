@@ -122,10 +122,10 @@ A model card serves as a "single source of truth" about a model, enabling full t
 
 The model card includes:
 \begin{itemize}
-    \item Git repository URL and commit hash
-    \item Dataset name, version, and pointer to data storage
-    \item Experiment tracking ID (MLflow run ID)
-    \item Training environment specifications
+    \item Model overview (architecture, task, intended use)
+    \item Dataset name, version, split ratios, and augmentation details
+    \item Training configuration (epochs, learning rate, optimizer, batch size, seed)
+    \item Performance metrics (populated dynamically from training results)
     \item Known limitations, biases, and risks
 \end{itemize}
 
@@ -149,7 +149,24 @@ The base deep-learning project was initialized with the following structure:
 \textbf{3. Configuration Management:}
 Configuration files using YAML format were created to manage hyperparameters, ensuring no hardcoded values in the training scripts. This enables reproducible experiments and easy hyperparameter tuning.
 
-% TODO: Tilføj screenshots af GitHub repo, config filer, etc. 
+% SCREENSHOT PLACEHOLDER: GitHub repo overblik + configs/config.yaml
+% Tag screenshot af: https://github.com/katrinemie/MLOps-PJK (repo forsiden)
+% og configs/config.yaml indhold (hyperparametre: model, learning_rate, batch_size, epochs, seed)
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=\linewidth]{figures/github_repo_overview.png}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af GitHub repo (katrinemie/MLOps-PJK) forsiden med mappestruktur og README\vspace{2em}}}
+    \caption{GitHub repository overview for the MLOps-PJK project showing the project structure, branches, and recent commits.}
+    \label{fig:github-repo}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=\linewidth]{figures/config_yaml.png}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af configs/config.yaml med hyperparametre (model\_name, learning\_rate: 0.001, batch\_size: 32, epochs: 10, seed: 42)\vspace{2em}}}
+    \caption{Configuration file (\texttt{configs/config.yaml}) managing all hyperparameters, eliminating hardcoded values in training scripts.}
+    \label{fig:config-yaml}
+\end{figure}
 
 \section{Continuous ML}\label{sec:continuous-ml}
 
@@ -163,11 +180,13 @@ The implemented CI/CD pipeline for our Cats vs Dogs project is orchestrated usin
 \begin{enumerate}
     \item \textbf{Lint}: Flake8 checks the \texttt{src/} directory for PEP8 compliance (\texttt{max-line-length=100}). If the code does not pass linting, the pipeline stops immediately (fail-fast principle).
     \item \textbf{Test}: \texttt{pytest} runs all unit tests in \texttt{tests/} with coverage reporting (\texttt{--cov=src}). Test results are published as JUnit XML for Jenkins to display.
-    \item \textbf{Build \& Push Docker}: A Docker image is built from \texttt{Dockerfile} (based on \texttt{python:3.11-slim}) and tagged with both the Git commit hash (\texttt{\$\{GIT\_COMMIT\}}) and \texttt{latest}. Both tags are pushed to the local Docker Registry at \texttt{172.24.198.42:5000}.
-    \item \textbf{Fetch Data}: DVC pulls the versioned dataset from the MinIO S3 storage (\texttt{s3://daki4-26-gr3/dvc} on \texttt{172.24.198.42:9000}), ensuring the training always uses data consistent with the current code version.
+    \item \textbf{Build \& Push Docker}: A Docker image is built from \texttt{Dockerfile.serve} (based on \texttt{pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime}) and tagged with both the Git commit hash (\texttt{\$\{GIT\_COMMIT\}}) and \texttt{latest}. Both tags are pushed to the local Docker Registry at \texttt{172.24.198.42:5000}.
+    \item \textbf{Fetch Data}: DVC pulls the versioned dataset from the MinIO S3 storage (\texttt{s3://pkj-catdog/dvc} on \texttt{172.24.198.42:9000}), ensuring the training always uses data consistent with the current code version.
     \item \textbf{Train}: The model is trained via \texttt{python src/train.py --config configs/config.yaml} with MLflow tracking enabled. All hyperparameters and per-epoch metrics are logged to the MLflow server.
     \item \textbf{Evaluate}: The trained model is evaluated on the test set via \texttt{python src/evaluate.py}, computing accuracy, precision, recall, and F1-score.
+    \item \textbf{Quantize}: Post-training quantization is applied to the trained model via \texttt{python src/quantize\_benchmark.py}, producing a compressed INT8 model for CPU deployment.
     \item \textbf{Register Model}: On the \texttt{main} branch only, the pipeline queries the latest MLflow run. If accuracy $\geq$ 80\%, the model is registered in the MLflow Model Registry under the name \texttt{cats-vs-dogs-model}. If accuracy is below the threshold, the pipeline fails.
+    \item \textbf{Deploy API}: The Docker image with the serving API is deployed, making the model available via the Flask REST endpoint at \texttt{172.24.198.42:5001}.
 \end{enumerate}
 
 In addition to the Jenkins pipeline, a \textbf{GitHub Actions CI workflow} (\texttt{.github/workflows/ci.yml}) runs on every push and pull request to \texttt{main} and \texttt{develop}. This workflow installs dependencies, runs all pre-commit hooks (\texttt{pre-commit run --all-files}), and executes the test suite. This provides a cloud-based safety net that complements the local Jenkins pipeline.
@@ -188,8 +207,19 @@ Together, these ensure that any registered model can be traced back to the exact
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/cicd_pipeline.png}
-    \caption{Jenkins CI/CD pipeline for the Cats vs Dogs project, showing the 7 stages from Lint to Register Model.}
+    \caption{Jenkins CI/CD pipeline for the Cats vs Dogs project, showing the 9 stages from Lint to Deploy API.}
     \label{fig:jenkins-pipeline}
+\end{figure}
+
+% SCREENSHOT PLACEHOLDER: Jenkins UI fra http://172.24.198.42:8080
+% Tag screenshot af: Jenkins dashboard med pipeline stages (grøn/blå = success)
+% Vis: Stage View eller Blue Ocean view med alle 9 stages for et succesfuldt build
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=\linewidth]{figures/jenkins_ui.png}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af Jenkins UI (172.24.198.42:8080) med Stage View der viser alle pipeline stages: Lint $\to$ Test $\to$ Build \& Push Docker $\to$ Fetch Data $\to$ Train $\to$ Evaluate $\to$ Quantize $\to$ Register Model $\to$ Deploy API\vspace{2em}}}
+    \caption{Jenkins pipeline execution on the AAU cluster (\texttt{172.24.198.42:8080}) showing all stages completing successfully.}
+    \label{fig:jenkins-ui}
 \end{figure}
 
 \subsection{D2.2: Unit Test Code Coverage}
@@ -235,7 +265,16 @@ Unit tests were implemented using \texttt{pytest} covering the core modules of t
 
 The higher coverage for \texttt{model.py} (85\%) and partial coverage of \texttt{data\_loader.py} (45\%) reflects that we test the core functionality---model output shape, save/load, image validation, transforms, and the dataset class---without requiring the full dataset on disk. \texttt{train.py} and \texttt{evaluate.py} have 0\% unit test coverage because they require the complete dataset and a GPU to execute meaningfully; these modules are instead validated through integration testing in the Jenkins pipeline.
 
-% Note: Code coverage is documented in Table~\ref{tab:coverage} above. A terminal screenshot can be added when available.
+% SCREENSHOT PLACEHOLDER: pytest coverage output
+% Kør: cd MLOps-PJK && pytest tests/ --cov=src --cov-report=term-missing
+% Tag screenshot af terminal output med coverage-tabel (8 passed, 24% total coverage)
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=\linewidth]{figures/pytest_coverage.png}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af terminal output fra \texttt{pytest tests/ --cov=src --cov-report=term-missing} der viser 8 passed tests og coverage per modul (model.py: 85\%, data\_loader.py: 45\%, total: 24\%)\vspace{2em}}}
+    \caption{Terminal output from \texttt{pytest} showing 8 passing tests and code coverage per module.}
+    \label{fig:pytest-coverage}
+\end{figure}
 
 \subsection{D2.3: Experiment Tracking}
 
@@ -248,9 +287,27 @@ MLflow is used for experiment tracking, hosted on the AAU cluster at \texttt{htt
     \item \textbf{Artifact}: the best model checkpoint (\texttt{best\_model.pt}) is uploaded as an MLflow artifact (via \texttt{mlflow.log\_artifact}).
 \end{itemize}
 
-All runs are grouped under the experiment name \texttt{cats-vs-dogs}. The MLflow UI enables comparison between different runs and model versions, facilitating informed decisions about which model to promote to production.
+All runs are grouped under the experiment name \texttt{cats-vs-dogs-v2}. The MLflow UI enables comparison between different runs and model versions, facilitating informed decisions about which model to promote to production.
 
-% Note: MLflow screenshots should be captured from http://172.24.198.42:5050 and added as figures/mlflow_experiments.png and figures/mlflow_comparison.png when available.
+% SCREENSHOT PLACEHOLDER: MLflow experiment oversigt + run sammenligning
+% Tag screenshots fra: http://172.24.198.42:5050
+% 1) Experiments-siden: vis cats-vs-dogs-v2 eksperiment med liste af runs (parameters, metrics)
+% 2) Comparison view: vælg 2+ runs og vis metric-sammenligning (val_accuracy, train_loss)
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=\linewidth]{figures/mlflow_experiments.png}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af MLflow UI (172.24.198.42:5050) experiment-oversigten for \texttt{cats-vs-dogs-v2} med runs der viser loggede parametre (model\_name, lr, batch\_size, epochs) og metrics (best\_val\_accuracy)\vspace{2em}}}
+    \caption{MLflow experiment overview showing all training runs for the \texttt{cats-vs-dogs-v2} experiment with logged parameters and metrics.}
+    \label{fig:mlflow-experiments}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=\linewidth]{figures/mlflow_comparison.png}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af MLflow run comparison view med 2+ runs, der viser val\_accuracy og train\_loss kurver over epochs\vspace{2em}}}
+    \caption{MLflow run comparison showing validation accuracy and training loss across different training runs.}
+    \label{fig:mlflow-comparison}
+\end{figure}
 
 \subsection{Implementation: Exercises}
 
@@ -260,9 +317,9 @@ All runs are grouped under the experiment name \texttt{cats-vs-dogs}. The MLflow
 
 \textbf{3. Unit tests:} 8 tests were written for the \texttt{model.py} and \texttt{data\_loader.py} modules using \texttt{pytest}, covering model output shape, save/load, image validation, dataset operations, and transforms.
 
-\textbf{4. CI/CD with Jenkins + GitHub Actions:} Jenkins was configured on the AAU cluster (\texttt{172.24.198.42:8080}) to orchestrate the full ML pipeline. A \texttt{Jenkinsfile} defines 7 stages: Lint, Test, Build \& Push Docker, Fetch Data, Train, Evaluate, and Register Model. Additionally, a GitHub Actions workflow (\texttt{.github/workflows/ci.yml}) runs pre-commit hooks and tests on every push and pull request, serving as a lightweight cloud-based CI gate.
+\textbf{4. CI/CD with Jenkins + GitHub Actions:} Jenkins was configured on the AAU cluster (\texttt{172.24.198.42:8080}) to orchestrate the full ML pipeline. A \texttt{Jenkinsfile} defines 9 stages: Lint, Test, Build \& Push Docker, Fetch Data, Train, Evaluate, Quantize, Register Model, and Deploy API. Additionally, a GitHub Actions workflow (\texttt{.github/workflows/ci.yml}) runs pre-commit hooks and tests on every push and pull request, serving as a lightweight cloud-based CI gate.
 
-\textbf{5. Docker:} A \texttt{Dockerfile} based on \texttt{python:3.11-slim} packages the source code and dependencies. The Jenkins pipeline builds the image and pushes it to the local Docker Registry (\texttt{172.24.198.42:5000}), tagged with the Git commit hash for traceability.
+\textbf{5. Docker:} A \texttt{Dockerfile.serve} based on \texttt{pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime} packages the source code and dependencies. The Jenkins pipeline builds the image and pushes it to the local Docker Registry (\texttt{172.24.198.42:5000}), tagged with the Git commit hash for traceability.
 
 \textbf{6. MLflow integration:} Experiment tracking was integrated into \texttt{train.py} using explicit MLflow API calls (\texttt{log\_params}, \texttt{log\_metrics}, \texttt{log\_metric}, \texttt{log\_artifact}), logging all hyperparameters, per-epoch metrics, and the best model checkpoint to the cluster MLflow instance.
 
@@ -398,8 +455,9 @@ Automatic Mixed Precision (AMP) was implemented using PyTorch's \texttt{torch.am
 
 \textbf{Implementation:}
 \begin{verbatim}
-scaler = torch.amp.GradScaler("cuda")
-with torch.amp.autocast(device_type="cuda"):
+from torch.amp import GradScaler, autocast
+scaler = GradScaler("cuda")
+with autocast("cuda"):
     output = model(input)
     loss = loss_fn(output, target)
 scaler.scale(loss).backward()
@@ -638,7 +696,17 @@ quantize_dynamic(
 
 The quantized model was integrated into the ONNX Runtime Android example app and deployed on a Samsung Galaxy phone. The quantized model replaces the default MobileNet model in the \texttt{readModel()} function of \texttt{MainActivity.kt}.
 
-% TODO: Inds{\ae}t screenshot af demo p{\aa} telefon + inference tider
+% SCREENSHOT PLACEHOLDER: Android demo på Samsung Galaxy
+% Tag screenshot af: Telefonen der kører ONNX Runtime Android app med ResNet50 (kvantiseret)
+% Vis: Klassifikationsresultat + inference tid for FP32 vs UInt8 modellen
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=0.5\linewidth]{figures/phone_demo_fp32.png}
+    % \includegraphics[width=0.5\linewidth]{figures/phone_demo_int8.png}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af Samsung Galaxy telefon der kører ONNX Runtime Android app med ResNet50-v1-12. Vis inference tid for FP32 model og UInt8 kvantiseret model side om side\vspace{2em}}}
+    \caption{Deployment of the quantized ResNet50 model on a Samsung Galaxy phone using the ONNX Runtime Android app. Left: FP32 original model. Right: UInt8 quantized model with reduced inference time.}
+    \label{fig:phone-demo}
+\end{figure}
 
 \subsection{D5.2: Endpoint Testing and Safeguarding}
 
@@ -726,35 +794,37 @@ The carbon footprint of a single training run is negligible ($<$1 g CO\textsubsc
 
 \subsection{D6.2: Annual Carbon Footprint Estimate}
 
-To estimate the annual carbon footprint, we assume the following use case: the model is deployed as a REST API (\texttt{src/serve.py}) serving image classification requests, and is retrained monthly to account for potential drift.
+To estimate the annual carbon footprint, we use our cost estimator script (\texttt{src/cost\_estimator.py}), which models the full annual cost of operating the ML pipeline based on measured training metrics and deployment assumptions.
 
-\textbf{Assumptions:}
+\textbf{Assumptions} (from \texttt{results/annual\_cost\_estimate.json}):
 \begin{itemize}
-    \item \textbf{Inference}: 1{,}000 requests/day, each taking $\sim$15.3 ms on CPU (from batch size 1 benchmark). GPU idle power between requests.
-    \item \textbf{Server}: Runs 24/7 on a single CPU core ($\sim$10 W idle, $\sim$25 W under load).
-    \item \textbf{Retraining}: Once per month, 10 epochs each ($\sim$0.65 g CO\textsubscript{2} per run).
-    \item \textbf{Energy mix}: Denmark average $\sim$100 g CO\textsubscript{2}/kWh.
+    \item \textbf{Retraining}: 52 times per year (weekly) to account for potential drift.
+    \item \textbf{Per training}: 0.041 kWh energy, $\sim$1 hour GPU time, 4.39 g CO\textsubscript{2}.
+    \item \textbf{Inference}: 1{,}000{,}000 inferences per year at negligible per-inference cost (\$0.000001 each).
+    \item \textbf{GPU cost}: \$0.44/hour (cloud equivalent).
+    \item \textbf{Energy mix}: 107 g CO\textsubscript{2}/kWh (Denmark regional average).
 \end{itemize}
 
 \textbf{Annual estimate:}
 
 \begin{table}[h]
 \centering
-\caption{Estimated annual carbon footprint for model deployment.}
+\caption{Estimated annual carbon footprint and cost for model operation.}
 \label{tab:annual-carbon}
-\begin{tabular}{@{} l r r @{}}
+\begin{tabular}{@{} l r r r @{}}
 \toprule
-\textbf{Component} & \textbf{Energy/year} & \textbf{CO\textsubscript{2}/year} \\
+\textbf{Component} & \textbf{Energy/year} & \textbf{CO\textsubscript{2}/year} & \textbf{Cost/year} \\
 \midrule
-Inference server (24/7, $\sim$12 W avg) & 105 kWh & 10.5 kg \\
-Monthly retraining ($12 \times 6.5$ Wh) & 0.08 kWh & 7.8 g \\
+Weekly retraining ($52 \times 0.041$ kWh) & 2.13 kWh & 228 g (0.23 kg) & \$22.88 \\
+Inference (1M inferences) & negligible & negligible & \$1.00 \\
+Infrastructure overhead & -- & -- & \$4.58 \\
 \midrule
-\textbf{Total} & \textbf{$\sim$105 kWh} & \textbf{$\sim$10.5 kg CO\textsubscript{2}} \\
+\textbf{Total} & \textbf{$\sim$2.13 kWh} & \textbf{$\sim$0.23 kg CO\textsubscript{2}} & \textbf{\$28.46} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The inference server dominates the annual footprint ($>$99\%), while retraining is negligible. This is typical for small models: the operational cost of keeping the server running far exceeds the training cost. For larger models (e.g., LLMs), the balance shifts significantly toward training. Quantization (INT8) could reduce inference energy by $\sim$50\% through lower compute requirements.
+The annual carbon footprint is extremely low (0.23 kg CO\textsubscript{2}, equivalent to $\sim$1.9 km of car driving) because ResNet18 is a small model (11M parameters) that trains quickly. The total annual cost of \$28.46 is dominated by GPU compute for weekly retraining (\$22.88), with inference being negligible. For larger models (e.g., LLMs), both training cost and carbon footprint would scale significantly.
 
 \subsection{D6.3: Drift Detection and Mitigation}
 
@@ -767,12 +837,12 @@ The inference server dominates the annual footprint ($>$99\%), while retraining 
 
 \textbf{Detection strategy:}
 
-Our pipeline can detect drift at two levels:
+Our drift detection script (\texttt{src/drift\_detector.py}) detects drift at two levels:
 
 \begin{enumerate}
-    \item \textbf{Feature-level drift} (data drift): Compare the distribution of model activations (penultimate layer embeddings) between a reference set (training data) and incoming production data. Statistical tests such as the Kolmogorov-Smirnov test or Maximum Mean Discrepancy (MMD) can flag when the embedding distribution shifts significantly. Tools like Evidently AI provide out-of-the-box drift reports for tabular and embedding data.
+    \item \textbf{Feature-level drift} (data drift): The Kolmogorov-Smirnov (KS) two-sample test compares the distribution of each feature between a reference dataset and incoming production data. For each feature, the KS statistic and p-value are computed. If the p-value falls below a significance threshold (default: 0.05), drift is flagged for that feature. The script outputs per-feature drift results in a JSON report (\texttt{results/drift\_detection\_report.json}).
 
-    \item \textbf{Performance-level drift} (concept drift): Monitor prediction confidence distributions over time. If the average softmax confidence drops, or the ratio of low-confidence predictions ($<$70\%) increases, this signals that the model is encountering inputs it is less certain about. In our Flask API (\texttt{src/serve.py}), each prediction already returns confidence scores, which can be logged and aggregated.
+    \item \textbf{Performance-level drift} (concept drift): The script compares the model's current accuracy against a baseline accuracy. The accuracy drop is classified into severity levels: \textit{low} ($\leq$5\%), \textit{moderate} ($>$5\%), \textit{high} ($>$10\%), or \textit{critical} ($>$15\%). Based on severity, the script recommends either continued monitoring, close observation, or immediate retraining.
 \end{enumerate}
 
 \textbf{Mitigation strategy:}
@@ -798,13 +868,29 @@ Our pipeline logs the following metrics through MLflow, accessible at \texttt{ht
     \item \textbf{Serving health}: The \texttt{/health} endpoint reports model load status and device info
 \end{itemize}
 
-% TODO: Tilføj screenshot fra MLflow UI (http://172.24.198.42:5050) som figures/mlflow_monitoring.png
-%\begin{figure}[h]
-%    \centering
-%    \includegraphics[width=\linewidth]{figures/mlflow_monitoring.png}
-%    \caption{MLflow experiment tracking showing logged metrics, parameters, and artifacts for multiple training runs.}
-%    \label{fig:mlflow-monitoring}
-%\end{figure}
+% SCREENSHOT PLACEHOLDER: MLflow monitoring dashboard
+% Tag screenshot fra: http://172.24.198.42:5050
+% Vis: En enkelt run-side med Parameters (model_name, lr, batch_size, epochs, optimizer, seed),
+%       Metrics grafer (train_loss, val_loss, train_acc, val_acc over epochs),
+%       og Artifacts (best_model.pt, carbon_tracking.json, model_card.md)
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=\linewidth]{figures/mlflow_monitoring.png}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af MLflow run-detaljer (172.24.198.42:5050) der viser: (1) Parameters: model\_name, learning\_rate, batch\_size, epochs, optimizer, seed, (2) Metrics-grafer: train\_loss, val\_loss, train\_acc, val\_acc over epochs, (3) Artifacts: best\_model.pt, carbon\_tracking.json, model\_card.md\vspace{2em}}}
+    \caption{MLflow run details showing logged parameters, training metric curves, and model artifacts for a completed training run.}
+    \label{fig:mlflow-monitoring}
+\end{figure}
+
+% SCREENSHOT PLACEHOLDER: MLflow Model Registry
+% Tag screenshot fra: http://172.24.198.42:5050/#/models/cats-vs-dogs-model
+% Vis: Model Registry med versioner, stage (Production/Staging), og deployment metadata
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=\linewidth]{figures/mlflow_registry.png}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot af MLflow Model Registry (172.24.198.42:5050/\#/models) der viser \texttt{cats-vs-dogs-model} med versioner og Production/Staging stage transitions\vspace{2em}}}
+    \caption{MLflow Model Registry showing registered model versions with production stage assignments for the \texttt{cats-vs-dogs-model}.}
+    \label{fig:mlflow-registry}
+\end{figure}
 
 The CarbonTracker output is logged as an MLflow artifact alongside the model checkpoint, providing a complete record of both the model's performance and its environmental cost. This enables tracking how carbon efficiency changes across model versions.
 
@@ -812,7 +898,7 @@ The CarbonTracker output is logged as an MLflow artifact alongside the model che
 
 \textbf{1. CarbonTracker integration} (\texttt{src/train.py}): CarbonTracker wraps the training loop, measuring GPU energy per epoch. Results are saved to JSON and logged as an MLflow artifact.
 
-\textbf{2. Drift detection strategy}: Feature-level drift via embedding distribution comparison (KS-test) and performance-level drift via confidence monitoring. Not yet implemented as automated code, but the strategy is designed for integration with the existing Flask API.
+\textbf{2. Drift detection} (\texttt{src/drift\_detector.py}): Implemented as an automated script that detects both data drift (KS-test on feature distributions) and concept drift (accuracy comparison with severity classification). Results are saved to \texttt{results/drift\_detection\_report.json}.
 
 \textbf{3. MLflow monitoring}: All training runs are tracked in MLflow with full parameter, metric, and artifact logging. The MLflow UI serves as the primary monitoring dashboard for experiment comparison and model version history.
 
@@ -844,12 +930,12 @@ Branch & main \\
 \multicolumn{2}{l}{\textbf{Data}} \\
 Dataset & Microsoft Cats vs Dogs (Kaggle) \\
 Version & Tracked via DVC (MinIO remote) \\
-Storage & MinIO S3: \texttt{s3://daki4-26-gr3/dvc} \\
+Storage & MinIO S3: \texttt{s3://pkj-catdog/dvc} \\
 Train/Val/Test Split & 70/15/15 \\
 \midrule
 \multicolumn{2}{l}{\textbf{Training}} \\
 Framework & PyTorch 2.x \\
-Environment & Docker (\texttt{python:3.11-slim}) / Singularity (AI-Lab) \\
+Environment & Docker (\texttt{pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime}) / Singularity (AI-Lab) \\
 Hardware & NVIDIA L4 24 GB (AI-Lab) / RTX Pro 4000 Ada 20 GB (DAKI cluster) \\
 Training Time & $\sim$5.4 min (10 epochs, single GPU) \\
 MLflow Run ID & Tracked at \texttt{http://172.24.198.42:5050} \\
