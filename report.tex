@@ -60,6 +60,8 @@ This report documents an MLOps pipeline built for a Cats vs Dogs image classifie
 \section*{Preface}
 This report documents the MLOps pipeline built during the DAKI4 MLOps course at Aalborg University. The pipeline was implemented together with the project group, while this report was written individually.
 
+The Cats vs Dogs image classification task on ResNet18 is a practical vehicle for demonstrating MLOps discipline, since it is complex enough to require versioning of both code and data, yet simple enough to execute end-to-end on modest infrastructure. Across eight modules, the report traces how the pipeline evolves from ad-hoc training in Module 1 to a fully automated, monitored, and continuously improving system across Modules 2 to 8. The unifying thread is \emph{traceability}, where every registered model can be traced back to the exact code version, data version, and hyperparameters that produced it, enabling both reproducibility and continuous improvement.
+
 % NOTE: adjust this declaration to match your actual use of generative AI before submission.
 In accordance with the AAU rules on the use of generative AI, see \href{https://www.studerende.aau.dk/regler-og-praktisk/regler/regler-for-brug-af-generativ-ai}{the AAU guidelines}, the use of generative AI in this report is declared as follows. Generative AI was used as a support tool for refining the language of the report and as an assistant during development of the pipeline code. All technical content, results, and conclusions were produced, reviewed, and verified by the author, and every reported number comes from the project's own experiments.
 
@@ -69,7 +71,7 @@ In accordance with the AAU rules on the use of generative AI, see \href{https://
 \subsection{D1.1: Introduction to MLOps}
 Machine Learning Operations (MLOps) is a set of best practices that combines Machine Learning (ML), DevOps, and Data Engineering to manage the full lifecycle of ML models in production. While traditional software development has evolved from waterfall to agile to DevOps methodologies, ML applications present unique challenges that require a new approach.
 
-The fundamental difference between traditional software and ML systems is that ML is not only code but \textbf{code plus data}. This relationship means that both code and data must evolve together in a controlled manner. Without a systematic MLOps approach, divergence between code and data evolution can cause problems in production, hinder smooth deployment, and lead to results that are hard to trace or reproduce.
+The fundamental difference between traditional software and ML systems is that ML is not only code but \textbf{code plus data}. This relationship means that both code and data must evolve together in a controlled manner. Without a systematic MLOps approach, divergence between code and data evolution can cause problems in production, hinder smooth deployment, and lead to results that are hard to trace or reproduce. For the Cats vs Dogs pipeline, this means that changes to image preprocessing, augmentation, or the training dataset must be versioned together with code changes so that any trained model can be traced back to the exact data and code that produced it.
 
 \textbf{Key differences from traditional development paradigms:}
 \begin{itemize}
@@ -115,9 +117,9 @@ Based on the selected project, the following challenges are anticipated in devel
 
 \textbf{Monitoring and maintenance challenges:}
 \begin{itemize}
-    \item Detecting model drift when input data distribution changes over time
+    \item Detecting model drift when input data distribution changes over time (e.g., new cat/dog breeds, different camera angles or lighting conditions in production images)
     \item Setting up appropriate alerts and triggers for model retraining
-    \item Balancing model performance with inference latency requirements
+    \item Balancing model performance with inference latency requirements (critical for edge deployment on Jetson Nano, Module~\ref{sec:deployment})
 \end{itemize}
 
 \subsection{D1.4: Model Card}
@@ -152,7 +154,7 @@ The base deep-learning project was initialized with the following structure:
 \end{verbatim}
 
 \textbf{3. Configuration Management:}
-Configuration files using YAML format were created to manage hyperparameters, ensuring no hardcoded values in the training scripts. This enables reproducible experiments and easy hyperparameter tuning.
+Configuration files using YAML format were created to manage hyperparameters, ensuring no hardcoded values in the training scripts. This enables reproducible experiments and easy hyperparameter tuning. In the Cats vs Dogs pipeline, the configuration specifies model architecture (ResNet18), learning rate (0.001), batch size (32), and seed (42), allowing any team member to reproduce exact training conditions or compare runs via MLflow (Section~\ref{sec:continuous-ml}).
 
 % SCREENSHOT PLACEHOLDER: GitHub repo overblik + configs/config.yaml
 % Tag screenshot af: https://github.com/katrinemie/MLOps-JKP (repo forsiden)
@@ -208,7 +210,7 @@ In addition to the Jenkins pipeline, a \textbf{GitHub Actions CI workflow} (\tex
     \item \textbf{MLflow}: Tracks all experiment runs including hyperparameters (model name, learning rate, batch size, epochs, optimizer, seed), per-epoch metrics (train/val loss and accuracy), final best validation accuracy, and the model artifact (\texttt{best\_model.pt}).
 \end{itemize}
 
-Together, these ensure that any registered model can be traced back to the exact code, data, and configuration that produced it. The overall pipeline structure is visualized in Figure~\ref{fig:jenkins-pipeline}, which illustrates the sequence of automated stages from code submission to production deployment.
+Together, these ensure that any registered model can be traced back to the exact code, data, and configuration that produced it, enabling debugging and reproducibility if the model drifts or fails in production (Sections \ref{sec:monitoring} and \ref{sec:post-deployment}). The overall pipeline structure is visualized in Figure~\ref{fig:jenkins-pipeline}, which illustrates the sequence of automated stages from code submission to production deployment.
 
 \begin{figure}[h]
     \centering
@@ -333,7 +335,7 @@ All runs are grouped under the experiment name \texttt{cat\_vs\_dog-JKP}. The ML
 
 \section{Scalable Training}\label{sec:scalable-training}
 
-This module addresses techniques for scaling deep learning training across multiple GPUs and nodes. As model sizes and dataset volumes grow, training on a single GPU becomes infeasible, both in terms of memory and time. Scalable training techniques enable time compression (faster convergence) and the ability to train larger models.
+This module addresses techniques for scaling deep learning training across multiple GPUs and nodes. As model sizes and dataset volumes grow, training on a single GPU becomes infeasible, both in terms of memory and time. Scalable training techniques enable time compression (faster convergence) and the ability to train larger models. For MLOps pipelines like the Cats vs Dogs ResNet18 classifier, faster training reduces the feedback cycle duration in the CI/CD pipeline (Section~\ref{sec:continuous-ml}), enabling quicker iteration on hyperparameters and faster response to detected model drift.
 
 \subsection{D3.1: Speedup Estimate from Parallelization}
 
@@ -678,7 +680,7 @@ Even at 90\% sparsity (only 10\% of original weights non-zero), the pruned model
 
 \textbf{3. Pruning} (\texttt{src/prune\_finetune.py}): Global L1 unstructured pruning sweep (0--95\%) with knowledge distillation recovery.
 
-\textbf{4. Pipeline integration}: Quantization is included as a dedicated stage in the Jenkins pipeline (\texttt{Jenkinsfile}, stage ``Quantize''), running automatically after evaluation. This produces a compressed INT8 model ready for CPU deployment.
+\textbf{4. Pipeline integration}: Quantization is included as a dedicated stage in the Jenkins pipeline (\texttt{Jenkinsfile}, stage ``Quantize'', see \Cref{sec:continuous-ml}), running automatically after evaluation. This produces a compressed INT8 model ready for CPU deployment.
 
 All experiments were run on AAU AI-Lab (NVIDIA L4 GPU, AMD EPYC CPU) via Slurm batch jobs.
 
@@ -688,7 +690,7 @@ This module covers deployment of trained models to edge devices and the importan
 
 \subsection{D5.1: Secret Model Deployment on Phone}
 
-The ``secret model'' (ResNet50-v1-12 in ONNX FP32 format) was quantized from FP32 to UInt8 using ONNX Runtime's dynamic quantization:
+Edge deployment requires a model to fit strict memory and latency constraints on a mobile device, where battery and compute are limited. Quantization reduces both model size and inference latency, which makes on-device inference practical. Reusing the quantization approach established for our own ResNet18 in \Cref{sec:scalable-inference}, the ``secret model'' (ResNet50-v1-12 in ONNX FP32 format) was quantized from FP32 to UInt8 using ONNX Runtime's dynamic quantization:
 
 \begin{verbatim}
 from onnxruntime.quantization import (
@@ -716,7 +718,7 @@ The quantized model was integrated into the ONNX Runtime Android example app and
 
 \subsection{D5.2: Endpoint Testing and Safeguarding}
 
-For our Cats vs Dogs classification model deployed as an API endpoint, we consider the following testing dimensions.
+Deployment via APIs requires defensive hardening against malicious inputs, overload, and adversarial attacks. For our Cats vs Dogs classification model deployed as an API endpoint (see \texttt{src/serve.py}), we consider the following testing dimensions.
 
 \textbf{Functional testing:}
 \begin{itemize}
@@ -724,7 +726,7 @@ For our Cats vs Dogs classification model deployed as an API endpoint, we consid
     \item Test with valid cat and dog images to confirm correct classification.
     \item Test with proper error handling for missing or malformed request bodies.
 \end{itemize}
-This can be automated using \texttt{pytest} with the \texttt{requests} library, or via Postman/Newman for manual and CI/CD-integrated testing.
+This can be automated using \texttt{pytest} with the \texttt{requests} library, or via Postman/Newman for manual and CI/CD-integrated testing. Our implementation (\texttt{src/serve.py}) includes error handling for missing image fields and invalid file formats.
 
 \textbf{Robustness testing:}
 \begin{itemize}
@@ -760,7 +762,7 @@ This module covers post-deployment monitoring: tracking the carbon footprint of 
 
 \subsection{D6.1: Carbon Footprint of Training}
 
-The carbon footprint of training our ResNet18 model was measured using \texttt{carbontracker}, which is integrated directly into the training loop (\texttt{src/train.py}). CarbonTracker monitors GPU power consumption per epoch and estimates CO\textsubscript{2} emissions based on the energy mix of the compute region.
+The carbon footprint of training our ResNet18 model was measured using \texttt{carbontracker}, which is integrated directly into the same training loop (\texttt{src/train.py}) and MLflow tracking introduced in \Cref{sec:continuous-ml}. CarbonTracker monitors GPU power consumption per epoch and estimates CO\textsubscript{2} emissions based on the energy mix of the compute region.
 
 \textbf{Implementation} (from \texttt{src/train.py}):
 \begin{verbatim}
@@ -837,6 +839,8 @@ The annual carbon footprint is low (0.23 kg CO\textsubscript{2}, equivalent to a
 
 \subsection{D6.3: Drift Detection and Mitigation}
 
+Drift detection is critical for the Cats vs Dogs pipeline because silent model degradation can go unnoticed; early detection enables timely retraining, whose carbon cost is tracked per the estimate in \Cref{tab:annual-carbon}.
+
 \textbf{Types of drift} relevant to our Cats vs Dogs classifier:
 
 \begin{itemize}
@@ -860,14 +864,14 @@ When drift is detected, the following steps would be taken:
 \begin{enumerate}
     \item \textbf{Alert}: Trigger a notification (e.g., via webhook or email) when drift metrics exceed a threshold.
     \item \textbf{Diagnose}: Inspect the drifted samples to understand the nature of the shift (new breeds, lighting changes, out-of-distribution images).
-    \item \textbf{Retrain}: Trigger a retraining pipeline (via Jenkins) with updated data that includes representative samples from the shifted distribution.
+    \item \textbf{Retrain}: Trigger a retraining pipeline (via the Jenkins stages described in \Cref{sec:continuous-ml}) with updated data that includes representative samples from the shifted distribution.
     \item \textbf{Validate}: Compare the retrained model against the previous version on both old and new data distributions before promoting to production.
     \item \textbf{Deploy}: Use the MLflow Model Registry to promote the new model version to Production stage, which the serving API picks up automatically.
 \end{enumerate}
 
 \subsection{D6.4: Monitoring Metrics}
 
-Our pipeline logs the following metrics through MLflow, which is accessible at \texttt{http://172.24.198.42:5050}.
+Monitoring metrics consolidates carbon footprint (\Cref{tab:carbon,tab:annual-carbon}), drift signals, and model performance into a single MLflow dashboard. This enables data-driven decisions about when retraining the Cats vs Dogs model is warranted. Our pipeline logs the following metrics through MLflow, which is accessible at \texttt{http://172.24.198.42:5050}:
 
 \begin{itemize}
     \item \textbf{Training metrics}: Per-epoch train/val loss and accuracy and best validation accuracy
@@ -913,7 +917,7 @@ The CarbonTracker output is logged as an MLflow artifact alongside the model che
 
 \section{Guest Lecture}\label{sec:guest-lecture}
 
-The final module consisted of three guest lectures on MLOps in practice, followed by short presentations where one member from each project group described their group's MLOps pipeline. The goal of this module was not to introduce a new technique but to learn from how other groups solved the same MLOps problems with different tools and design choices.
+The final module consisted of three guest lectures on MLOps in practice, followed by short presentations where one member from each project group described their group's MLOps pipeline. This section is presented before Post Deployment (\Cref{sec:post-deployment}) to follow the order in which the modules were taught; the documentation IDs (D8.1 here, D7.1--D7.2 in Post Deployment) keep the course's own numbering. The goal of this module was not to introduce a new technique but to learn from how other groups solved the same MLOps problems with different tools and design choices.
 
 \subsection{D8.1: Key Takeaways from Guest Lectures and Presentations}
 
@@ -936,17 +940,17 @@ Decoupled serving & Training and serving separated through ONNX and FastAPI \\
 \end{tabularx}
 \end{table}
 
-\textbf{Vision Transformer group.} This group fine-tuned a Vision Transformer on the Oxford-IIIT Pet dataset across 37 breeds and reached 93.5\% accuracy. Their pipeline ran twelve Jenkins stages from checkout to deployment, and a model could only be registered if its accuracy passed a 65\% gate. The main takeaway is that an automated quality gate stops a degraded model from reaching production, which is the same mechanism our own pipeline uses where model registration only happens when accuracy passes a fixed threshold.
+\textbf{Vision Transformer group.} This group fine-tuned a Vision Transformer on the Oxford-IIIT Pet dataset across 37 breeds and reached 93.5\% accuracy. Their pipeline ran twelve Jenkins stages from checkout to deployment, and a model could only be registered if its accuracy passed a 65\% gate. The main takeaway is that an automated quality gate stops a degraded model from reaching production, which is the same mechanism our own pipeline uses where model registration only happens when accuracy passes a fixed threshold (see \Cref{sec:continuous-ml}).
 
 \textbf{Group 1.} This group used Great Expectations to validate the dataset before training, checking that files load, that labels are present, and that the input shape is correct. They also cached their Singularity containers by hashing the Dockerfile and the requirements file, so a new image is only built when one of these files changes. Since our own training also runs in Singularity on AI-Lab, this caching approach is directly useful for reducing build time.
 
-\textbf{ONNX and FastAPI group.} This group separated training from serving by exporting the model to ONNX and serving it through FastAPI, so the production container does not depend on PyTorch. They used MLflow as an approval step where a person confirms a model before it is deployed. Their point that a pipeline is not better simply because it is larger is a useful reminder, and their serving setup points to the inference API that our own project still lacks.
+\textbf{ONNX and FastAPI group.} This group separated training from serving by exporting the model to ONNX and serving it through FastAPI, so the production container does not depend on PyTorch. They used MLflow as an approval step where a person confirms a model before it is deployed. Their point that a pipeline is not better simply because it is larger is a useful reminder, and their serving setup points to the inference API that our own ResNet18 pipeline lacks due to scope constraints; however, exporting to ONNX for CPU-based inference could be evaluated as a future extension.
 
 Together, these presentations show that the same MLOps goals can be reached through different combinations of tools. Several of the ideas, in particular the container caching and the ONNX serving split, are concrete improvements that could be applied to our own pipeline.
 
 \section{Post Deployment}\label{sec:post-deployment}
 
-This module covers techniques for managing deployed models over time: continual learning to handle new tasks without forgetting, and machine unlearning to selectively remove learned information. Both exercises use the MNIST digit classification dataset.
+This module covers techniques for managing deployed models over time, namely continual learning to handle new tasks without forgetting, and machine unlearning to selectively remove learned information. Both exercises use the course's provided setup on the MNIST digit classification dataset rather than our Cats vs Dogs ResNet18 model from \Cref{sec:intro}. The techniques are dataset and architecture agnostic, so the same mechanisms transfer directly to the deployed classifier, for example adapting to new breeds without forgetting existing classes or removing specific training data on request.
 
 \subsection{D7.1: Na\"ive Continual Learning vs. Replay + EWC}
 
@@ -1041,7 +1045,7 @@ Digit 7 was successfully unlearned (0.0\% accuracy) while the remaining classes 
 
 \textbf{2. Machine unlearning} (\texttt{src/unlearning.py}): Gradient ascent unlearning of digit 7 followed by retain fine-tuning. Demonstrates successful targeted forgetting with documented collateral damage to remaining classes.
 
-Both experiments were run on AAU AI-Lab (NVIDIA L4 GPU) via Slurm batch jobs (\texttt{scripts/run\_module7.sh}).
+Both experiments were run on AAU AI-Lab (NVIDIA L4 GPU) via Slurm batch jobs (\texttt{scripts/run\_module7.sh}). The same codebase structure and training environment used for the Cats vs Dogs pipeline (\Cref{sec:scalable-training}) enable direct transfer: replay buffer and EWC regularization could be integrated into the ResNet18 retraining workflow described in \Cref{sec:monitoring} when drift is detected.
 
 \section{Summary}
 \input{summary}
@@ -1088,7 +1092,7 @@ Epochs & 10 \\
 Optimizer & Adam \\
 \midrule
 \multicolumn{2}{l}{\textbf{Performance}} \\
-Accuracy & 96.1\% (val, single GPU) \\
+Accuracy & 96.1\% (val, single GPU; see \Cref{tab:ddp}) \\
 Precision & Logged per run in MLflow \\
 Recall & Logged per run in MLflow \\
 F1-Score & Logged per run in MLflow \\
