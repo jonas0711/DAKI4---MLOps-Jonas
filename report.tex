@@ -705,15 +705,12 @@ The quantized model was integrated into the ONNX Runtime Android example app and
 
 \Cref{fig:phone-demo} shows the deployed model running on a Samsung Galaxy device, comparing inference latency between the FP32 original and UInt8 quantized models for live image classification.
 
-% SCREENSHOT PLACEHOLDER: Android demo på Samsung Galaxy
-% Tag screenshot af: Telefonen der kører ONNX Runtime Android app med ResNet50 (kvantiseret)
-% Vis: Klassifikationsresultat + inference tid for FP32 vs UInt8 modellen
 \begin{figure}[h]
     \centering
-    % \includegraphics[width=0.5\linewidth]{figures/phone_demo_fp32.png}
-    % \includegraphics[width=0.5\linewidth]{figures/phone_demo_int8.png}
-    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot of a Samsung Galaxy phone running the ONNX Runtime Android app with ResNet50-v1-12, showing the inference time for the FP32 model and the UInt8 quantized model side by side\vspace{2em}}}
-    \caption{Deployment of the quantized ResNet50 model on a Samsung Galaxy phone using the ONNX Runtime Android app. Left: FP32 original model. Right: UInt8 quantized model with reduced inference time.}
+    \includegraphics[width=0.48\linewidth]{figures/phone_demo_fp32.png}
+    \hfill
+    \includegraphics[width=0.48\linewidth]{figures/phone_demo_int8.png}
+    \caption{Deployment of the quantized ResNet50 model on a Samsung Galaxy phone using the ONNX Runtime Android app, classifying the same scene. Left: the FP32 model with quantization disabled runs in 101 ms. Right: the UInt8 quantized model runs in 67 ms, a reduction in inference time of about 34\%.}
     \label{fig:phone-demo}
 \end{figure}
 
