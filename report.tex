@@ -60,7 +60,7 @@ This report documents an MLOps pipeline built for a Cats vs Dogs image classifie
 \section*{Preface}
 This report documents the MLOps pipeline built during the DAKI4 MLOps course at Aalborg University. The pipeline was implemented together with the project group, while this report was written individually.
 
-The Cats vs Dogs image classification task on ResNet18 works well for showing MLOps practices. It is complex enough to need versioning of both code and data, but simple enough to run end-to-end on standard hardware. Across eight modules, the report traces how the pipeline evolves from ad-hoc training in Module 1 to a fully automated, monitored, and continuously improving system across Modules 2 to 8. The central idea is \emph{traceability}. Every registered model can be traced back to the exact code version, data version, and hyperparameters that produced it. This enables reproducibility and continuous improvement.
+The Cats vs Dogs image classification task on ResNet18 works well for showing MLOps practices. It is complex enough to need versioning of both code and data, but simple enough to run end-to-end on standard hardware. Across eight modules, the report traces how the pipeline changes from ad-hoc training in Module 1 to a fully automated, monitored, and continuously improving system across Modules 2 to 8. The central idea is \emph{traceability}. Every registered model can be traced back to the exact code version, data version, and hyperparameters that produced it. This enables reproducibility and continuous improvement.
 
 % NOTE: adjust this declaration to match your actual use of generative AI before submission.
 In accordance with the AAU rules on the use of generative AI, see \href{https://www.studerende.aau.dk/regler-og-praktisk/regler/regler-for-brug-af-generativ-ai}{the AAU guidelines}, the use of generative AI in this report is declared as follows. Generative AI was used as a support tool for refining the language of the report and as an assistant during development of the pipeline code. All technical content, results, and conclusions were produced, reviewed, and verified by the author, and every reported number comes from the project's own experiments.
@@ -71,14 +71,14 @@ In accordance with the AAU rules on the use of generative AI, see \href{https://
 \subsection{D1.1: Introduction to MLOps}
 Machine Learning Operations (MLOps) combines Machine Learning, DevOps, and Data Engineering to manage the full lifecycle of ML models in production. ML applications have unique challenges that traditional software does not have, because code alone is not enough. This requires a different approach than the waterfall, agile, and DevOps methodologies used in traditional software development.
 
-ML systems differ from traditional software in one key way: ML is not just code, it is \textbf{code plus data}. Code and data must evolve together. If they diverge, the model will fail in production and the results will be hard to trace or reproduce. For the Cats vs Dogs pipeline, this means every change to image preprocessing, augmentation, or the dataset must be versioned with code changes. Only then can any trained model be traced back to the exact data and code that produced it.
+ML systems differ from traditional software in one key way: ML is not just code, it is \textbf{code plus data}. Code and data must evolve together. If they drift apart, the model will fail in production and the results will be hard to trace or reproduce. For the Cats vs Dogs pipeline, this means every change to image preprocessing, augmentation, or the dataset must be versioned with code changes. Only then can any trained model be traced back to the exact data and code that produced it.
 
 \textbf{Key differences from traditional development paradigms:}
 \begin{itemize}
     \item \textbf{Waterfall}: Linear, non-iterative development unsuitable for dynamic ML projects where requirements change based on model performance and data drift.
     \item \textbf{Agile}: Iterative but does not address the data-centric nature of ML systems or the need for continuous model monitoring.
     \item \textbf{DevOps}: Focuses on code CI/CD but lacks mechanisms for data versioning, model registry, and ML-specific monitoring.
-    \item \textbf{MLOps}: Extends DevOps with three interconnected cycles, covering data, model, and code, ensuring reproducibility, traceability, and continuous improvement.
+    \item \textbf{MLOps}: Extends DevOps with three linked cycles covering data, model, and code, to ensure reproducibility, traceability, and continuous improvement.
 \end{itemize}
 
 The MLOps workflow has three phases. \textbf{Build} includes data ingestion, model training, testing, packaging, and registration. \textbf{Deploy} includes application testing and production release via CI/CD. \textbf{Monitor} includes checking data integrity, detecting model drift, and tracking application performance. These three phases are enabled by data, code, artifacts, middleware, and infrastructure.
@@ -99,7 +99,7 @@ The dataset is downloaded via a custom script using the KaggleHub API, ensuring 
 The project repository is available at \url{https://github.com/katrinemie/MLOps-JKP}.
 
 \subsection{D1.3: Foreseen Challenges}
-Based on the selected project, the following challenges are anticipated in developing and maintaining the MLOps pipeline:
+Based on the selected project, the following challenges are expected in developing and maintaining the MLOps pipeline:
 
 \textbf{Development challenges:}
 \begin{itemize}
@@ -180,7 +180,7 @@ This module covers Continuous Integration and Continuous Delivery (CI/CD) applie
 
 \subsection{D2.1: Continuous ML Pipeline Overview}
 
-The implemented CI/CD pipeline for our Cats vs Dogs project is orchestrated using Jenkins, running on the AAU MLOps cluster (\texttt{daki-storage}, \texttt{172.24.198.42:8080}). The pipeline is defined in a \texttt{Jenkinsfile} and triggered automatically when Jenkins detects new commits in the repository.
+The implemented CI/CD pipeline for our Cats vs Dogs project is run using Jenkins, running on the AAU MLOps cluster (\texttt{daki-storage}, \texttt{172.24.198.42:8080}). The pipeline is defined in a \texttt{Jenkinsfile} and triggered automatically when Jenkins detects new commits in the repository.
 
 \textbf{Pipeline stages (as defined in Jenkinsfile):}
 \begin{enumerate}
@@ -192,11 +192,11 @@ The implemented CI/CD pipeline for our Cats vs Dogs project is orchestrated usin
     \item \textbf{Evaluate}: The trained model is evaluated on the test set via \texttt{python src/evaluate.py}, computing accuracy, precision, recall, and F1-score.
     \item \textbf{Quantize}: Post-training quantization is applied to the trained model via \texttt{python src/quantize\_benchmark.py}, producing a compressed INT8 model for CPU deployment.
     \item \textbf{Register Model}: On the \texttt{main} branch only, the pipeline queries the latest MLflow run. If accuracy $\geq$ 80\%, the model is registered in the MLflow Model Registry under the name \texttt{cats-vs-dogs-model}. If accuracy is below the threshold, the pipeline fails.
-    \item \textbf{Deploy Model}: The latest registered model version is transitioned to Production stage in the MLflow Model Registry. Deployment metadata is logged as tags on the model version for auditability.
+    \item \textbf{Deploy Model}: The latest registered model version is transitioned to Production stage in the MLflow Model Registry. Deployment metadata is logged as tags on the model version for tracking.
     \item \textbf{Deploy API}: The Docker image with the serving API is deployed, making the model available via the Flask REST endpoint at \texttt{172.24.198.42:5001}.
 \end{enumerate}
 
-In addition to the Jenkins pipeline, a \textbf{GitHub Actions CI workflow} (\texttt{.github/workflows/ci.yml}) runs on every push and pull request to \texttt{main} and \texttt{develop}. This workflow installs dependencies, runs all pre-commit hooks (\texttt{pre-commit run --all-files}), and executes the test suite. This provides a cloud-based safety net that complements the local Jenkins pipeline.
+In addition to the Jenkins pipeline, a \textbf{GitHub Actions CI workflow} (\texttt{.github/workflows/ci.yml}) runs on every push and pull request to \texttt{main} and \texttt{develop}. This workflow installs dependencies, runs all pre-commit hooks (\texttt{pre-commit run --all-files}), and executes the test suite. This provides a cloud-based safety net that backs up the local Jenkins pipeline.
 
 \textbf{Local pre-commit hooks} (\texttt{.pre-commit-config.yaml}) also run before each commit on the developer's machine. These include trailing whitespace removal, YAML validation, large file detection ($>$5\,MB), private key detection, merge conflict checks, secret scanning via \texttt{detect-secrets}, and Flake8 linting.
 
@@ -209,7 +209,7 @@ In addition to the Jenkins pipeline, a \textbf{GitHub Actions CI workflow} (\tex
     \item \textbf{MLflow}: Tracks all experiment runs including hyperparameters (model name, learning rate, batch size, epochs, optimizer, seed), per-epoch metrics (train/val loss and accuracy), final best validation accuracy, and the model artifact (\texttt{best\_model.pt}).
 \end{itemize}
 
-These three systems work together. Any registered model can be traced back to the exact code, data, and configuration that produced it. This enables debugging and reproducibility if the model drifts or fails in production (Sections \ref{sec:monitoring} and \ref{sec:post-deployment}). The overall pipeline structure is visualized in Figure~\ref{fig:jenkins-pipeline}, which illustrates the sequence of automated stages from code submission to production deployment.
+These three systems work together. Any registered model can be traced back to the exact code, data, and configuration that produced it. This enables debugging and reproducibility if the model drifts or fails in production (Sections \ref{sec:monitoring} and \ref{sec:post-deployment}). The overall pipeline structure is visualized in Figure~\ref{fig:jenkins-pipeline}, which shows the sequence of automated stages from code submission to production deployment.
 
 \begin{figure}[h]
     \centering
@@ -319,7 +319,7 @@ All runs are grouped under the experiment name \texttt{cat\_vs\_dog-JKP}. The ML
 
 \textbf{3. Unit tests:} 8 tests were written for the \texttt{model.py} and \texttt{data\_loader.py} modules using \texttt{pytest}, covering model output shape, save/load, image validation, dataset operations, and transforms.
 
-\textbf{4. CI/CD with Jenkins + GitHub Actions:} Jenkins was configured on the AAU cluster (\texttt{172.24.198.42:8080}) to orchestrate the full ML pipeline. A \texttt{Jenkinsfile} defines 10 stages: Lint, Test, Build \& Push Docker, Fetch Data, Train, Evaluate, Quantize, Register Model, Deploy Model, and Deploy API. Additionally, a GitHub Actions workflow (\texttt{.github/workflows/ci.yml}) runs pre-commit hooks and tests on every push and pull request, serving as a lightweight cloud-based CI gate.
+\textbf{4. CI/CD with Jenkins + GitHub Actions:} Jenkins was configured on the AAU cluster (\texttt{172.24.198.42:8080}) to run the full ML pipeline. A \texttt{Jenkinsfile} defines 10 stages: Lint, Test, Build \& Push Docker, Fetch Data, Train, Evaluate, Quantize, Register Model, Deploy Model, and Deploy API. Additionally, a GitHub Actions workflow (\texttt{.github/workflows/ci.yml}) runs pre-commit hooks and tests on every push and pull request, serving as a lightweight cloud-based CI gate.
 
 \textbf{5. Docker:} A \texttt{Dockerfile.serve} based on \texttt{pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime} packages the source code and dependencies. The Jenkins pipeline builds the image and pushes it to the local Docker Registry (\texttt{172.24.198.42:5000}), tagged with the Git commit hash for traceability.
 
@@ -329,7 +329,7 @@ All runs are grouped under the experiment name \texttt{cat\_vs\_dog-JKP}. The ML
 
 \section{Scalable Training}\label{sec:scalable-training}
 
-This module addresses techniques for scaling deep learning training across multiple GPUs and nodes. As model sizes and dataset volumes grow, training on a single GPU becomes infeasible, both in terms of memory and time. Scalable training techniques allow us to train models faster (quicker convergence) and to train larger models. For our Cats vs Dogs ResNet18 pipeline, faster training means we can iterate on hyperparameters more quickly and respond faster to model drift detected in the CI/CD pipeline (Section~\ref{sec:continuous-ml}).
+This module addresses techniques for scaling deep learning training across multiple GPUs and nodes. As model sizes and dataset volumes grow, training on a single GPU cannot work well, both because of memory limits and time constraints. Scalable training techniques allow us to train models faster (quicker convergence) and to train larger models. For our Cats vs Dogs ResNet18 pipeline, faster training means we can iterate on hyperparameters more quickly and respond faster to model drift detected in the CI/CD pipeline (Section~\ref{sec:continuous-ml}).
 
 \subsection{D3.1: Speedup Estimate from Parallelization}
 
@@ -399,7 +399,7 @@ Parameters & 0.076 & $\sim 9{,}000\times$ \\
 \end{tabular}
 \end{table}
 
-These numbers illustrate the diminishing returns of scaling, since halving the test loss requires enormous increases in resources. For our ResNet18 model with approximately 11 million parameters, this would mean scaling to $\sim$99 billion parameters, or increasing the dataset from $\sim$25{,}000 images to $\sim$37.5 million images, or increasing compute by a factor of $\sim 1.1 \times 10^{6}$. On a linear scale, the power law shows diminishing returns, though it appears linear in log-log space.
+These numbers show that we get less benefit from scaling each time we try it, since halving the test loss requires enormous increases in resources. For our ResNet18 model with approximately 11 million parameters, this would mean scaling to $\sim$99 billion parameters, or increasing the dataset from $\sim$25{,}000 images to $\sim$37.5 million images, or increasing compute by a factor of $\sim 1.1 \times 10^{6}$. On a linear scale, the power law shows we get less benefit each time, though it appears linear in log-log space.
 
 \begin{figure}[h]
     \centering
@@ -485,11 +485,11 @@ scaler.update()
 \end{tabular}
 \end{table}
 
-AMP reduces VRAM usage by $\sim$33\% (860$\to$574 MB on single GPU) with negligible training time difference. On the NVIDIA L4, the speed benefit of AMP is minimal because the L4 has limited FP16 Tensor Core throughput compared to A100/H100. The VRAM savings are large enough to allow larger batch sizes or larger models. The slight accuracy variation is within normal training variance.
+AMP reduces VRAM usage by $\sim$33\% (860$\to$574 MB on single GPU) with very small difference in training time. On the NVIDIA L4, the speed benefit of AMP is minimal because the L4 has limited FP16 Tensor Core throughput compared to A100/H100. The VRAM savings are large enough to allow larger batch sizes or larger models. The slight accuracy variation is within normal training variance.
 
 \subsection{D3.6: ZeRO Optimizer Stages}
 
-The Zero Redundancy Optimizer (ZeRO) from Microsoft's DeepSpeed framework saves memory by splitting model states across GPUs instead of copying them to each GPU. ZeRO has three cumulative stages:
+The Zero Redundancy Optimizer (ZeRO) from Microsoft's DeepSpeed framework saves memory by splitting model states across GPUs instead of copying them to each GPU. ZeRO has three stages that build on each other:
 
 \begin{table}[h]
 \centering
@@ -513,7 +513,7 @@ deepspeed train.py --deepspeed_config \
   ds_config.json
 \end{verbatim}
 
-For our ResNet18 model ($\sim$11M parameters), ZeRO saves only modest memory in absolute terms since the model is already small (860 MB VRAM). ZeRO matters more for larger models where optimizer states and gradients use most of the memory. We did not benchmark ZeRO on AI-Lab because the container lacks DeepSpeed, but we have configurations for all three stages in the repository (\texttt{configs/ds\_config\_zero\{1,2,3\}.json}).
+For our ResNet18 model ($\sim$11M parameters), ZeRO saves only small amounts of memory in absolute terms since the model is already small (860 MB VRAM). ZeRO matters more for larger models where optimizer states and gradients use most of the memory. We did not benchmark ZeRO on AI-Lab because the container lacks DeepSpeed, but we have configurations for all three stages in the repository (\texttt{configs/ds\_config\_zero\{1,2,3\}.json}).
 
 \subsection{Implementation: Exercises}
 
@@ -535,7 +535,7 @@ This module covers how to optimize model inference by reducing model size, impro
 
 \subsection{D4.1: Model Compression via Quantization}
 
-Post-training quantization (PTQ) was applied to the ResNet18 model using PyTorch's FX graph mode static quantization. Static PTQ quantizes both weights and activations to INT8. Dynamic quantization only quantizes weights. A calibration dataset (320 synthetic images) was used to determine optimal quantization parameters (scale and zero-point) for each layer.
+Post-training quantization (PTQ) was applied to the ResNet18 model using PyTorch's FX graph mode static quantization. Static PTQ quantizes both weights and activations to INT8. Dynamic quantization only quantizes weights. A calibration dataset (320 synthetic images) was used to determine the best quantization parameters (scale and zero-point) for each layer.
 
 \textbf{Results on AAU AI-Lab (NVIDIA L4 GPU, AMD EPYC 7543 CPU):}
 Table~\ref{tab:quantization} compares the model size and inference latency between FP32 and INT8 quantized ResNet18, showing the compression ratio and speedup on CPU inference.
@@ -555,7 +555,7 @@ Inference (bs=32, CPU) & 163.8 ms & 25.9 ms & 6.3$\times$ faster \\
 \end{tabular}
 \end{table}
 
-The 74.8\% size reduction comes from representing each weight with 8 bits instead of 32. The CPU speedup (2.4-6.3$\times$) results from INT8 operations using optimized SIMD instructions (VNNI on x86). The speedup increases with batch size as the quantized model more effectively utilizes CPU cache. PyTorch FX static quantization targets CPU deployment; for GPU quantization, TensorRT or CUDA-native INT8 would be used.
+The 74.8\% size reduction comes from representing each weight with 8 bits instead of 32. The CPU speedup (2.4-6.3$\times$) results from INT8 operations using optimized SIMD instructions (VNNI on x86). The speedup increases with batch size as the quantized model uses CPU cache more efficiently. PyTorch FX static quantization targets CPU deployment. For GPU quantization, TensorRT or CUDA-native INT8 would be used.
 
 The 98\% prediction agreement between FP32 and INT8 models shows that ResNet keeps within 1-2\% accuracy after quantization, which is typical for ResNet architectures.
 
@@ -591,7 +591,7 @@ We benchmarked batch inference across batch sizes 1 through 64 to measure the tr
 
 \textbf{Key findings:}
 \begin{itemize}
-    Throughput peaks at batch size 16 (around 350 img/s). At larger batch sizes, throughput drops because the data no longer fits in CPU cache.
+    \item Throughput peaks at batch size 16 (around 350 img/s). At larger batch sizes, throughput drops because the data no longer fits in CPU cache.
     \item Batch size 1 gives the lowest latency (15.8 ms) but lowest throughput (63.4 img/s). Batch size 16 gives 5.5 times higher throughput, but total latency per batch is higher (45.7 ms).
     \item On CPU, ResNet18 stays compute-bound up to batch size 16. Beyond that, the workload becomes memory bandwidth-bound because the data does not fit in L3 cache, so throughput drops at batch sizes 32 and 64.
 \end{itemize}
@@ -607,7 +607,7 @@ For production, batch size 8 to 16 gives good balance between latency (under 100
 
 \subsection{D4.3: Pruning vs. Accuracy}
 
-We applied global unstructured L1-norm pruning at increasing sparsity levels to a pretrained ResNet18 (ImageNet, 1000 classes). We measured how often the pruned model made the same predictions as the unpruned model on 200 test samples.
+We tested global unstructured L1-norm pruning at increasing sparsity levels on a pretrained ResNet18 (ImageNet, 1000 classes). We measured how often the pruned model made the same predictions as the unpruned model on 200 test samples.
 
 \begin{table}[h]
 \centering
@@ -657,7 +657,7 @@ To recover accuracy lost from aggressive pruning, we used knowledge distillation
 \end{tabular}
 \end{table}
 
-At 90\% sparsity (only 10\% of the original weights left), the pruned model recovers to 99.5\% prediction agreement after 10 epochs of knowledge distillation. This shows two things. First, neural networks have way more weights than they need, and most are redundant. Second, pruning plus fine-tuning together is an effective way to compress a model while keeping it accurate.
+At 90\% sparsity (only 10\% of the original weights left), the pruned model recovers to 99.5\% prediction agreement after 10 epochs of knowledge distillation. This shows two things. First, neural networks have way more weights than they need, and most are not needed. Second, pruning plus fine-tuning together is an effective way to compress a model while keeping it accurate.
 
 \begin{figure}[h]
     \centering
@@ -680,11 +680,11 @@ All experiments were run on AAU AI-Lab (NVIDIA L4 GPU, AMD EPYC CPU) via Slurm b
 
 \section{Deployment}\label{sec:deployment}
 
-This module covers deployment of trained models to edge devices and the importance of endpoint testing and safeguarding.
+This module covers deployment of trained models to edge devices. Endpoint testing and safeguarding are key to keeping the model safe.
 
 \subsection{D5.1: Secret Model Deployment on Phone}
 
-Edge deployment requires a model to fit strict memory and latency constraints on a mobile device, where battery and compute are limited. Quantization reduces both model size and inference latency, which makes on-device inference practical. Reusing the quantization approach established for our own ResNet18 in \Cref{sec:scalable-inference}, the ``secret model'' (ResNet50-v1-12 in ONNX FP32 format) was quantized from FP32 to UInt8 using ONNX Runtime's dynamic quantization:
+Deploying to a phone means the model has to fit tight memory and latency limits, since battery and compute are scarce on a mobile device. Quantization reduces both model size and inference latency, which makes on-device inference practical. Reusing the quantization approach established for our own ResNet18 in \Cref{sec:scalable-inference}, the ``secret model'' (ResNet50-v1-12 in ONNX FP32 format) was quantized from FP32 to UInt8 using ONNX Runtime's dynamic quantization:
 
 \begin{verbatim}
 from onnxruntime.quantization import (
@@ -712,7 +712,7 @@ The quantized model was integrated into the ONNX Runtime Android example app and
 
 \subsection{D5.2: Endpoint Testing and Safeguarding}
 
-Deployment via APIs requires defensive hardening against malicious inputs, overload, and adversarial attacks. For our Cats vs Dogs classification model deployed as an API endpoint (see \texttt{src/serve.py}), we consider the following testing dimensions.
+Deployment via APIs needs hardening against malicious inputs, overload, and adversarial attacks. For our Cats vs Dogs classification model deployed as an API endpoint (see \texttt{src/serve.py}), we consider the following testing dimensions.
 
 \textbf{Functional testing:}
 \begin{itemize}
@@ -793,7 +793,7 @@ Car driving equivalent & 0.01 km \\
 \end{tabular}
 \end{table}
 
-The carbon footprint of a single training run is negligible ($\sim$1 g CO\textsubscript{2}) because ResNet18 is a small model (11M parameters) and training converges quickly on the Cats vs Dogs dataset. The measured CO\textsubscript{2} intensity of 143.3 g/kWh reflects the energy mix at the time of training. CarbonTracker results are logged as an MLflow artifact so each experiment has a complete record.
+The carbon footprint of a single training run is very small ($\sim$1 g CO\textsubscript{2}) because ResNet18 is a small model (11M parameters) and training converges quickly on the Cats vs Dogs dataset. The measured CO\textsubscript{2} intensity of 143.3 g/kWh reflects the energy mix at the time of training. CarbonTracker results are logged as an MLflow artifact so each experiment has a complete record.
 
 \subsection{D6.2: Annual Carbon Footprint Estimate}
 
@@ -805,7 +805,7 @@ The annual estimate models a full one-hour retraining run rather than the short 
 \begin{itemize}
     \item \textbf{Retraining}: 52 times per year (weekly) to account for potential drift.
     \item \textbf{Per training}: 0.041 kWh energy and 4.39 g CO\textsubscript{2} for a full one-hour GPU run.
-    \item \textbf{Inference}: 1{,}000{,}000 inferences per year at negligible per-inference cost (\$0.000001 each).
+    \item \textbf{Inference}: 1{,}000{,}000 inferences per year at a very small per-inference cost (\$0.000001 each).
     \item \textbf{GPU cost}: \$0.44/hour (cloud equivalent).
     \item \textbf{Energy mix}: 107 g CO\textsubscript{2}/kWh (Denmark regional average).
 \end{itemize}
@@ -821,7 +821,7 @@ Table~\ref{tab:annual-carbon} presents the annual energy, carbon, and cost estim
 \textbf{Component} & \textbf{Energy/year} & \textbf{CO\textsubscript{2}/year} & \textbf{Cost/year} \\
 \midrule
 Weekly retraining ($52 \times 0.041$ kWh) & 2.13 kWh & 228 g (0.23 kg) & \$22.88 \\
-Inference (1M inferences) & negligible & negligible & \$1.00 \\
+Inference (1M inferences) & very small & very small & \$1.00 \\
 Infrastructure overhead & -- & -- & \$4.58 \\
 \midrule
 \textbf{Total} & \textbf{$\sim$2.13 kWh} & \textbf{$\sim$0.23 kg CO\textsubscript{2}} & \textbf{\$28.46} \\
@@ -829,7 +829,7 @@ Infrastructure overhead & -- & -- & \$4.58 \\
 \end{tabular}
 \end{table}
 
-The annual carbon footprint is low (0.23 kg CO\textsubscript{2}, equivalent to approximately 1.9 km of car driving) because ResNet18 is a small model (11M parameters) that trains quickly. The total annual cost of \$28.46 is dominated by GPU compute for weekly retraining (\$22.88), with inference being negligible. For larger models (e.g., LLMs), both training cost and carbon footprint would be much higher.
+The annual carbon footprint is low (0.23 kg CO\textsubscript{2}, equivalent to approximately 1.9 km of car driving) because ResNet18 is a small model (11M parameters) that trains quickly. The total annual cost of \$28.46 comes mostly from GPU compute for weekly retraining (\$22.88), with inference being very small. For larger models (e.g., LLMs), both training cost and carbon footprint would be much higher.
 
 \subsection{D6.3: Drift Detection and Mitigation}
 
@@ -865,7 +865,7 @@ When drift is detected, the following steps would be taken:
 
 \subsection{D6.4: Monitoring Metrics}
 
-We consolidate carbon footprint (\Cref{tab:carbon,tab:annual-carbon}), drift signals, and model performance into a single MLflow dashboard. This helps us decide when to retrain the Cats vs Dogs model. Our pipeline logs the following metrics through MLflow, which is accessible at \texttt{http://172.24.198.42:5050}:
+We bring together carbon footprint (\Cref{tab:carbon,tab:annual-carbon}), drift signals, and model performance into a single MLflow dashboard. This helps us decide when to retrain the Cats vs Dogs model. Our pipeline logs the following metrics through MLflow, which is accessible at \texttt{http://172.24.198.42:5050}:
 
 \begin{itemize}
     \item \textbf{Training metrics}: Per-epoch train/val loss and accuracy and best validation accuracy
@@ -899,7 +899,7 @@ We consolidate carbon footprint (\Cref{tab:carbon,tab:annual-carbon}), drift sig
     \label{fig:mlflow-registry}
 \end{figure}
 
-The CarbonTracker output is logged as an MLflow artifact alongside the model checkpoint so we have a complete record of performance and environmental cost. This enables tracking how carbon efficiency changes across model versions.
+The CarbonTracker output is logged as an MLflow artifact alongside the model checkpoint so we have a complete record of performance and environmental cost. This lets us track how carbon efficiency changes across model versions.
 
 \subsection{Implementation: Exercises}
 
@@ -915,9 +915,9 @@ The final module consisted of three guest lectures on MLOps in practice, followe
 
 \subsection{D8.1: Key Takeaways from Guest Lectures and Presentations}
 
-The three guest lectures covered AI and machine learning at Aalborg Portland, DevOps and MLOps in industry, and federated learning. No detailed notes or slides were available for these talks, so this section focuses on the pipeline presentations, where the material was available.
+The three guest lectures covered AI and machine learning at Aalborg Portland, DevOps and MLOps in industry, and federated learning. No detailed notes or slides were kept from these talks, so we focus on the pipeline presentations, where the material was available.
 
-Three groups presented their pipelines. Every group built a pipeline for image classification, but the tool choices and the points they highlighted were different, as summarised in \Cref{tab:presentations}.
+Three groups presented their pipelines. Every group built a pipeline for image classification, but the tools and ideas each group highlighted were different, as shown in \Cref{tab:presentations}.
 
 \begin{table}[h]
 \centering
@@ -944,11 +944,11 @@ These presentations show that the same MLOps goals can be reached with different
 
 \section{Post Deployment}\label{sec:post-deployment}
 
-This module covers techniques for managing deployed models over time, namely continual learning to handle new tasks without forgetting, and machine unlearning to selectively remove learned information. Both exercises use the course's provided setup on MNIST digit classification instead of our Cats vs Dogs ResNet18 model from \Cref{sec:intro}. The techniques work on any dataset and architecture, so we can apply them directly to the deployed classifier, for example to adapt to new breeds without forgetting existing classes or to remove specific training data on request.
+This module covers techniques for managing deployed models over time, namely continual learning to handle new tasks without forgetting, and machine unlearning to remove what the model learned. Both exercises use the course's provided setup on MNIST digit classification instead of our Cats vs Dogs ResNet18 model from \Cref{sec:intro}. The techniques work on any dataset and architecture, so we can apply them directly to the deployed classifier, for example to adapt to new breeds without forgetting existing classes or to remove specific training data on request.
 
 \subsection{D7.1: Na\"ive Continual Learning vs. Replay + EWC}
 
-Catastrophic forgetting occurs when a neural network trained on new data loses its ability to perform on previously learned tasks. We demonstrate this effect and then mitigate it using experience replay combined with Elastic Weight Consolidation (EWC).
+Catastrophic forgetting occurs when a neural network trained on new data loses its ability to perform on previously learned tasks. We demonstrate this effect and then reduce it by using experience replay and Elastic Weight Consolidation (EWC).
 
 \textbf{Setup:} A simple MLP (784$\to$256$\to$128$\to$10) was trained sequentially on two tasks:
 \begin{itemize}
@@ -975,7 +975,7 @@ Replay + EWC & 85.9 & 98.6 & 92.1 \\
 \end{tabular}
 \end{table}
 
-Replay + EWC recovers 85.9\% accuracy on old digits while maintaining 98.6\% on new digits, demonstrating that the combination of a small memory buffer and weight regularization effectively mitigates catastrophic forgetting. The drop from 98.4\% to 85.9\% on old digits shows the stability-plasticity tradeoff, where learning new tasks with only a small replay buffer makes some forgetting of old tasks unavoidable.
+Replay + EWC recovers 85.9\% accuracy on old digits while maintaining 98.6\% on new digits, showing that a small memory buffer and weight regularization together effectively stop catastrophic forgetting. The drop from 98.4\% to 85.9\% on old digits shows the stability-plasticity tradeoff, where learning new tasks with only a small replay buffer makes some forgetting of old tasks unavoidable.
 
 \Cref{fig:continual} shows the catastrophic forgetting effect and how replay with EWC recovers on MNIST. The figure shows the three configurations. Task 1 reaches 98.4\%, naive sequential training drops to 0.3\% on the old digits, and replay with EWC recovers to 85.9\%.
 
@@ -1031,13 +1031,13 @@ optimizer.step()
     \label{fig:unlearning}
 \end{figure}
 
-Digit 7 was successfully unlearned (0.0\% accuracy) while the remaining classes maintained an average accuracy of 97.8\%, nearly identical to the baseline. The key to this result was balancing the unlearning strength (3 epochs with a conservative learning rate) with a short fine-tuning phase on retain data to stabilize shared representations. Without fine-tuning, gradient ascent damages other classes because the model's knowledge is spread across many parameters. Fine-tuning on the other classes restores them. To make gradient ascent work, we need to tune the unlearning strength carefully. If it is too strong we break other digits, and if it is too weak digit 7 is not fully forgotten.
+Digit 7 was successfully unlearned (0.0\% accuracy) while the remaining classes maintained an average accuracy of 97.8\%, nearly identical to the baseline. To get this result, we balanced the unlearning strength (3 epochs with a small learning rate) with a short fine-tuning phase on the retain data to keep shared knowledge steady. Without fine-tuning, gradient ascent hurts other classes because the model's knowledge is spread across many parameters. Fine-tuning on the other classes restores them. To make gradient ascent work, we need to tune the unlearning strength carefully. If it is too strong we break other digits, and if it is too weak digit 7 is not fully forgotten.
 
 \subsection{Implementation: Exercises}
 
-\textbf{1. Continual learning} (\texttt{src/continual\_learning.py}): Three-stage experiment on MNIST demonstrating catastrophic forgetting and mitigation via experience replay (500-sample buffer) combined with EWC regularization ($\lambda=400$, diagonal Fisher Information Matrix).
+\textbf{1. Continual learning} (\texttt{src/continual\_learning.py}): Three-stage experiment on MNIST showing catastrophic forgetting and how replay reduces it via experience replay (500-sample buffer) combined with EWC regularization ($\lambda=400$, diagonal Fisher Information Matrix).
 
-\textbf{2. Machine unlearning} (\texttt{src/unlearning.py}): Gradient ascent unlearning of digit 7 followed by retain fine-tuning. Demonstrates successful targeted forgetting with documented collateral damage to remaining classes.
+\textbf{2. Machine unlearning} (\texttt{src/unlearning.py}): Gradient ascent unlearning of digit 7 followed by retain fine-tuning. Demonstrates successful targeted forgetting with documented side effects to remaining classes.
 
 Both experiments ran on the AAU AI-Lab (NVIDIA L4 GPU) using Slurm batch jobs (\texttt{scripts/run\_module7.sh}). The same code structure and environment as the Cats vs Dogs pipeline (\Cref{sec:scalable-training}) means we can add replay buffer and EWC regularization to the ResNet18 retraining workflow in \Cref{sec:monitoring} when drift is detected.
 
