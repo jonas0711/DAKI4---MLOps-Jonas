@@ -6,32 +6,32 @@
         \toprule
         \textbf{Documentation ID} & \textbf{Summary of Answer} & \textbf{Reference} \\
         \midrule
-        D1.1  & MLOps combines ML, DevOps, and Data Engineering for full ML lifecycle management. Key difference: ML = code + data, requiring versioning of both. & Section~\ref{sec:intro} \\
-        D1.2  & Cats vs Dogs image classification using CNN on Microsoft Kaggle dataset (~25k images). DVC for data versioning. & Section~\ref{sec:intro} \\
-        D1.3  & Key challenges: dependency management, data versioning with DVC, experiment tracking, model drift detection & Section~\ref{sec:intro} \\
+        D1.1  & MLOps combines ML, DevOps, and Data Engineering for full ML lifecycle management, where ML equals code plus data, requiring versioning of both. & Section~\ref{sec:intro} \\
+        D1.2  & Cats vs Dogs image classification using ResNet18 on the Microsoft Kaggle dataset (~25k images). DVC for data versioning. & Section~\ref{sec:intro} \\
+        D1.3  & Key challenges include dependency management, data versioning with DVC, experiment tracking, and model drift detection. & Section~\ref{sec:intro} \\
         D1.4  & Model card documenting code, data, training environment, performance metrics, and limitations & Section~\ref{sec:appendix} \\
-        D2.1  & CI/CD pipeline via Jenkins on AAU cluster: commit triggers build, pre-commit checks, unit tests, training, evaluation, MLflow logging, and deployment. Full lineage tracked. & Section~\ref{sec:continuous-ml} \\
+        D2.1  & CI/CD pipeline via Jenkins on AAU cluster where commit triggers build, pre-commit checks, unit tests, training, evaluation, MLflow logging, and deployment with full lineage tracked. & Section~\ref{sec:continuous-ml} \\
         D2.2  & Unit tests cover data loading, model, training, and evaluation modules using pytest. & Section~\ref{sec:continuous-ml} \\
         D2.3  & MLflow on AAU cluster tracks hyperparameters, metrics, and artifacts per run. Enables cross-run comparison. & Section~\ref{sec:continuous-ml} \\
         D3.1  & Gustafson's Law ($a=0.15$): $2.70\times$ speedup on 3 GPUs with 90\% efficiency. & Section~\ref{sec:scalable-training} \\
-        D3.2  & Power-law scaling: halving test loss requires $\sim$1M$\times$ compute, $\sim$1500$\times$ data, or $\sim$9000$\times$ parameters. & Section~\ref{sec:scalable-training} \\
+        D3.2  & Power-law scaling shows that halving test loss requires $\sim$1M$\times$ compute, $\sim$1500$\times$ data, or $\sim$9000$\times$ parameters. & Section~\ref{sec:scalable-training} \\
         D3.3  & PyTorch DDP implemented for multi-GPU data parallelism with NCCL backend. & Section~\ref{sec:scalable-training} \\
         D3.4  & Multi-node training via torchrun across AAU cluster nodes. & Section~\ref{sec:scalable-training} \\
         D3.5  & AMP (FP16/FP32) yields $\sim$33\% VRAM savings (860$\to$574 MB). Minimal speed gain on L4 GPU. & Section~\ref{sec:scalable-training} \\
         D3.6  & ZeRO Stage 1/2/3: $4\times$/$8\times$/linear memory reduction via DeepSpeed. & Section~\ref{sec:scalable-training} \\
-        D4.1  & Static PTQ: 74.8\% size reduction (42.7$\to$10.8 MB), 2.4$\times$ CPU speedup (bs=1), 6.3$\times$ (bs=32), 98\% prediction agreement. & Section~\ref{sec:scalable-inference} \\
+        D4.1  & Static PTQ achieves 74.8\% size reduction (42.7$\to$10.8 MB), 2.4$\times$ CPU speedup (bs=1), 6.3$\times$ (bs=32), with 98\% prediction agreement. & Section~\ref{sec:scalable-inference} \\
         D4.2  & Peak throughput at bs=16 (350.2 img/s). Saturates due to CPU cache limits. Compute-bound up to bs=16, memory-bound beyond. & Section~\ref{sec:scalable-inference} \\
-        D4.3  & L1 global pruning: stable up to 40\% (97.5\% agreement), cliff at 50\% (14\%), collapse at 60\%+. & Section~\ref{sec:scalable-inference} \\
+        D4.3  & L1 global pruning remains stable up to 40\% (97.5\% agreement), shows cliff at 50\% (14\%), and collapses at 60\%+. & Section~\ref{sec:scalable-inference} \\
         D4.4  & Knowledge distillation recovers 99.5\% agreement even at 90\% sparsity after 10 epochs fine-tuning. & Section~\ref{sec:scalable-inference} \\
         D5.1  & ResNet50 ONNX quantized FP32$\to$UInt8 and deployed on Samsung Galaxy phone. & Section~\ref{sec:deployment} \\
-        D5.2  & Endpoint testing: functional (pytest/Postman), robustness (invalid inputs), performance (Locust), security (rate limiting, ZAP). Safeguards: confidence thresholds, input validation. & Section~\ref{sec:deployment} \\
-        D6.1  & CarbonTracker measured: 1.06 g CO\textsubscript{2} per training run (10 epochs, 5:18 min, 0.0074 kWh, 143.3 gCO\textsubscript{2}/kWh). & Section~\ref{sec:monitoring} \\
-        D6.2  & Annual estimate: $\sim$0.23 kg CO\textsubscript{2} (52 weekly retrainings, 2.13 kWh total). Equivalent to 1.9 km car driving. Total cost \$28.46/year. & Section~\ref{sec:monitoring} \\
+        D5.2  & Endpoint testing includes functional (pytest/Postman), robustness (invalid inputs), performance (Locust), and security (rate limiting, ZAP). Safeguards comprise confidence thresholds and input validation. & Section~\ref{sec:deployment} \\
+        D6.1  & CarbonTracker measured 1.06 g CO\textsubscript{2} per training run (10 epochs, 5:18 min, 0.0074 kWh, 143.3 gCO\textsubscript{2}/kWh). & Section~\ref{sec:monitoring} \\
+        D6.2  & Annual estimate is $\sim$0.23 kg CO\textsubscript{2} (52 weekly retrainings, 2.13 kWh total), equivalent to 1.9 km car driving, with total cost \$28.46/year. & Section~\ref{sec:monitoring} \\
         D6.3  & Data drift via KS-test on feature distributions. Concept drift via accuracy comparison with severity levels (low/moderate/high/critical). & Section~\ref{sec:monitoring} \\
         D6.4  & MLflow dashboard tracks training metrics, hyperparameters, artifacts, and model versions. CarbonTracker logged as artifact. & Section~\ref{sec:monitoring} \\
         D7.1  & Na\"ive sequential training causes catastrophic forgetting (98.4\%$\to$0.3\%). Replay + EWC recovers 85.9\% on old digits while maintaining 98.6\% on new (92.1\% total). & Section~\ref{sec:post-deployment} \\
         D7.2  & Gradient ascent unlearning reduces digit 7 accuracy from 96.9\% to 0\%. Remaining classes retain 97.8\% avg accuracy. Fine-tuning after unlearning stabilizes shared representations. & Section~\ref{sec:post-deployment} \\
-        D8.1  & Learned from three other groups' pipelines: a Vision Transformer with a 65\% accuracy gate, Great Expectations data validation with hashed Singularity container caching, and a training/serving split using ONNX and FastAPI. Guest lecture topics noted briefly. & Section~\ref{sec:guest-lecture} \\
+        D8.1  & Learned from three other groups' pipelines, namely a Vision Transformer with a 65\% accuracy gate, Great Expectations data validation with hashed Singularity container caching, and a training/serving split using ONNX and FastAPI. Guest lecture topics noted briefly. & Section~\ref{sec:guest-lecture} \\
         \bottomrule
     \end{tabularx}
 \end{table*}

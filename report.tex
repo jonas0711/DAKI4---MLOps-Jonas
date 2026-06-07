@@ -79,22 +79,22 @@ The fundamental difference between traditional software and ML systems is that M
     \item \textbf{MLOps}: Extends DevOps with three interconnected cycles, covering data, model, and code, ensuring reproducibility, traceability, and continuous improvement.
 \end{itemize}
 
-The MLOps workflow consists of three main phases, which are \textbf{Build} (data ingestion, model training, testing, packaging, registering), \textbf{Deploy} (application testing, production release via CI/CD), and \textbf{Monitor} (monitoring data integrity, model drift, and application performance). These phases are enabled by key drivers: data, code, artifacts, middleware, and infrastructure.
+The MLOps workflow consists of three main phases, which are \textbf{Build} (data ingestion, model training, testing, packaging, registering), \textbf{Deploy} (application testing, production release via CI/CD), and \textbf{Monitor} (monitoring data integrity, model drift, and application performance). Key drivers enable these phases, namely data, code, artifacts, middleware, and infrastructure.
 
 \subsection{D1.2: Project Description}
-For this course, I have selected \textbf{Cats vs Dogs Image Classification} as the foundation for building an MLOps pipeline. The project involves training a deep learning model to classify images of cats and dogs using the Microsoft Cats vs Dogs dataset from Kaggle.
+For this course, \textbf{Cats vs Dogs Image Classification} was selected as the foundation for building an MLOps pipeline. The project involves training a deep learning model to classify images of cats and dogs using the Microsoft Cats vs Dogs dataset from Kaggle.
 
 \textbf{Project specifications:}
 \begin{itemize}
     \item \textbf{Model type}: ResNet18 with transfer learning from ImageNet
     \item \textbf{Task}: Binary image classification (Cat vs Dog)
-    \item \textbf{Dataset}: Microsoft Cats vs Dogs (Kaggle) - approximately 25,000 images (12,500 cats, 12,500 dogs)
+    \item \textbf{Dataset}: Microsoft Cats vs Dogs (Kaggle) with approximately 25,000 images (12,500 cats, 12,500 dogs)
     \item \textbf{Framework}: PyTorch
 \end{itemize}
 
 The dataset is downloaded via a custom script using the KaggleHub API, ensuring reproducible data acquisition. Data versioning is handled through DVC (Data Version Control), which is already configured in the project repository.
 
-The project repository is available at: \url{https://github.com/katrinemie/MLOps-JKP}
+The project repository is available at \url{https://github.com/katrinemie/MLOps-JKP}.
 
 \subsection{D1.3: Foreseen Challenges}
 Based on the selected project, the following challenges are anticipated in developing and maintaining the MLOps pipeline:
@@ -208,7 +208,7 @@ In addition to the Jenkins pipeline, a \textbf{GitHub Actions CI workflow} (\tex
     \item \textbf{MLflow}: Tracks all experiment runs including hyperparameters (model name, learning rate, batch size, epochs, optimizer, seed), per-epoch metrics (train/val loss and accuracy), final best validation accuracy, and the model artifact (\texttt{best\_model.pt}).
 \end{itemize}
 
-Together, these ensure that any registered model can be traced back to the exact code, data, and configuration that produced it.
+Together, these ensure that any registered model can be traced back to the exact code, data, and configuration that produced it. The overall pipeline structure is visualized in Figure~\ref{fig:jenkins-pipeline}, which illustrates the sequence of automated stages from code submission to production deployment.
 
 \begin{figure}[h]
     \centering
@@ -403,7 +403,7 @@ Parameters & 0.076 & $\sim 9{,}000\times$ \\
 \end{tabular}
 \end{table}
 
-These numbers illustrate the diminishing returns of scaling, since halving the test loss requires enormous increases in resources. For our ResNet18 model with approximately 11 million parameters, this would mean scaling to $\sim$99 billion parameters, or increasing the dataset from $\sim$25{,}000 images to $\sim$37.5 million images, or increasing compute by a factor of over one million. This highlights why the power law represents diminishing returns when viewed on a linear scale, even though it appears linear in log-log space.
+These numbers illustrate the diminishing returns of scaling, since halving the test loss requires enormous increases in resources. For our ResNet18 model with approximately 11 million parameters, this would mean scaling to $\sim$99 billion parameters, or increasing the dataset from $\sim$25{,}000 images to $\sim$37.5 million images, or increasing compute by a factor of $\sim 1.1 \times 10^{6}$. This highlights why the power law represents diminishing returns when viewed on a linear scale, even though it appears linear in log-log space.
 
 \begin{figure}[h]
     \centering
@@ -561,7 +561,7 @@ Inference (bs=32, CPU) & 163.8 ms & 25.9 ms & 6.3$\times$ faster \\
 
 The 74.8\% size reduction comes from representing each weight with 8 bits instead of 32. The CPU speedup (2.4--6.3$\times$) results from INT8 operations using optimized SIMD instructions (VNNI on x86). The speedup increases with batch size as the quantized model more effectively utilizes CPU cache. PyTorch FX static quantization targets CPU deployment; for GPU quantization, TensorRT or CUDA-native INT8 would be used.
 
-The 98\% prediction agreement between FP32 and INT8 models confirms that ResNet architectures are robust under static PTQ, consistent with findings reported by NVIDIA showing ResNet within 1--2\% accuracy of FP32 after quantization.
+The 98\% prediction agreement between FP32 and INT8 models confirms that ResNet architectures are robust under static PTQ, consistent with the general finding that ResNet architectures remain within 1--2\% accuracy of FP32 after quantization.
 
 \begin{figure}[h]
     \centering
@@ -661,7 +661,7 @@ To recover the accuracy lost from aggressive pruning, knowledge distillation was
 \end{tabular}
 \end{table}
 
-Even at 90\% sparsity (only 10\% of original weights non-zero), the pruned model recovers to 99.5\% prediction agreement with the unpruned model after 10 epochs of knowledge distillation. This demonstrates two important principles: (1) neural networks are heavily over-parameterized and most weights are redundant, and (2) the combination of pruning and fine-tuning is a powerful compression strategy that maintains model quality.
+Even at 90\% sparsity (only 10\% of original weights non-zero), the pruned model recovers to 99.5\% prediction agreement with the unpruned model after 10 epochs of knowledge distillation. This demonstrates two important principles. First, neural networks are heavily over-parameterized and most weights are redundant. Second, the combination of pruning and fine-tuning is a powerful compression strategy that maintains model quality.
 
 \begin{figure}[h]
     \centering
@@ -778,7 +778,7 @@ for clog in glob.glob(str(model_dir / "*carbontracker*")):
     mlflow.log_artifact(clog)
 \end{verbatim}
 
-\textbf{Measured training footprint} (AAU AI-Lab, NVIDIA L4 GPU, ResNet18, 10 epochs):
+Table~\ref{tab:carbon} shows the measured carbon footprint for a 10-epoch training run on the AAU AI-Lab NVIDIA L4 GPU, including total energy consumption, CO\textsubscript{2} emissions, and the equivalent car driving distance.
 
 \begin{table}[h]
 \centering
@@ -814,7 +814,7 @@ The annual estimate models a full one-hour retraining run rather than the short 
     \item \textbf{Energy mix}: 107 g CO\textsubscript{2}/kWh (Denmark regional average).
 \end{itemize}
 
-\textbf{Annual estimate:}
+Table~\ref{tab:annual-carbon} presents the annual energy, carbon, and cost estimates based on the assumptions listed above, broken down by component (weekly retraining, inference, and infrastructure overhead).
 
 \begin{table}[h]
 \centering
@@ -851,7 +851,7 @@ Our drift detection script (\texttt{src/drift\_detector.py}) detects drift at tw
 \begin{enumerate}
     \item \textbf{Feature-level drift} (data drift): The Kolmogorov-Smirnov (KS) two-sample test compares the distribution of each feature between a reference dataset and incoming production data. For each feature, the KS statistic and p-value are computed. If the p-value falls below a significance threshold (default: 0.05), drift is flagged for that feature. The script outputs per-feature drift results in a JSON report (\texttt{results/drift\_detection\_report.json}).
 
-    \item \textbf{Performance-level drift} (concept drift): The script compares the model's current accuracy against a baseline accuracy. The accuracy drop is classified into severity levels: \textit{low} ($\leq$5\%), \textit{moderate} (5\% to 10\%), \textit{high} (10\% to 15\%), or \textit{critical} ($>$15\%). Based on severity, the script recommends either continued monitoring, close observation, or immediate retraining.
+    \item \textbf{Performance-level drift} (concept drift): The script compares the model's current accuracy against a baseline accuracy. The accuracy drop is classified into severity levels as \textit{low} ($\leq$5\%), \textit{moderate} (5\% to 10\%), \textit{high} (10\% to 15\%), and \textit{critical} ($>$15\%). Based on severity, the script recommends either continued monitoring, close observation, or immediate retraining.
 \end{enumerate}
 
 \textbf{Mitigation strategy:}
@@ -872,7 +872,7 @@ Our pipeline logs the following metrics through MLflow, which is accessible at \
 \begin{itemize}
     \item \textbf{Training metrics}: Per-epoch train/val loss and accuracy and best validation accuracy
     \item \textbf{Hyperparameters}: Model name, learning rate, batch size, epochs, optimizer, seed, AMP enabled
-    \item \textbf{Artifacts}: Best model checkpoint, carbon tracking report, model card
+    \item \textbf{Artifacts}: Best model checkpoint, carbon tracking report
     \item \textbf{Model registry}: Registered model versions
     \item \textbf{Serving health}: The \texttt{/health} endpoint reports model load status and device info
 \end{itemize}
@@ -885,7 +885,7 @@ Our pipeline logs the following metrics through MLflow, which is accessible at \
 \begin{figure}[h]
     \centering
     % \includegraphics[width=\linewidth]{figures/mlflow_monitoring.png}
-    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot of the MLflow run details (172.24.198.42:5050) showing (1) parameters model\_name, learning\_rate, batch\_size, epochs, optimizer, seed, (2) metric curves train\_loss, val\_loss, train\_acc, val\_acc over epochs, and (3) artifacts best\_model.pt, carbon\_tracking.json, model\_card.md\vspace{2em}}}
+    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot of the MLflow run details (172.24.198.42:5050) showing (1) parameters model\_name, learning\_rate, batch\_size, epochs, optimizer, seed, (2) metric curves train\_loss, val\_loss, train\_acc, val\_acc over epochs, and (3) artifacts best\_model.pt, carbon\_tracking.json\vspace{2em}}}
     \caption{MLflow run details showing logged parameters, training metric curves, and model artifacts for a completed training run.}
     \label{fig:mlflow-monitoring}
 \end{figure}
@@ -979,7 +979,7 @@ Replay + EWC & 85.9 & 98.6 & 92.1 \\
 
 Replay + EWC recovers 85.9\% accuracy on old digits while maintaining 98.6\% on new digits, demonstrating that the combination of a small memory buffer and weight regularization effectively mitigates catastrophic forgetting. The remaining gap from 98.4\% to 85.9\% on old digits reflects the inherent stability-plasticity tradeoff, since some forgetting is unavoidable when adapting to new tasks with limited replay data.
 
-Figure~\ref{fig:continual} visualizes the catastrophic forgetting phenomenon and the effectiveness of replay combined with EWC on MNIST.
+\Cref{fig:continual} visualizes the catastrophic forgetting phenomenon and the effectiveness of replay combined with EWC on MNIST. The figure shows the three configurations: the initial Task 1 accuracy of 98.4\%, the naive sequential degradation to 0.3\% on old digits, and the recovery to 85.9\% with replay and EWC.
 
 \begin{figure}[h]
     \centering
@@ -994,7 +994,7 @@ Machine unlearning aims to selectively remove the influence of specific training
 
 \textbf{Setup:} A classifier was trained on full MNIST (0--9) achieving 97.5\% baseline accuracy. The goal was to make the model forget digit ``7'' while retaining performance on the remaining digits.
 
-\textbf{Method:} Gradient ascent unlearning maximizes the loss on the forget class, effectively pushing the model away from correctly classifying that digit:
+\textbf{Method:} Gradient ascent unlearning maximizes the loss on the forget class, effectively pushing the model away from correctly classifying that digit. The update rule is as follows.
 
 \begin{verbatim}
 loss = -criterion(model(x), y)  # maximize loss
@@ -1049,6 +1049,8 @@ Both experiments were run on AAU AI-Lab (NVIDIA L4 GPU) via Slurm batch jobs (\t
 \section{Appendix}\label{sec:appendix}
 
 \subsection{Model Card}
+\Cref{tab:modelcard} presents the complete model card, documenting the exact code version, data configuration, hyperparameters, and performance metrics that enable full reproducibility and traceability of the trained classifier.
+
 \begin{table}[h]
 \centering
 \caption{Model Card for Cats vs Dogs Classifier}
