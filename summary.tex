@@ -29,10 +29,9 @@
         D6.2  & Annual estimate: $\sim$0.23 kg CO\textsubscript{2} (52 weekly retrainings, 2.13 kWh total). Equivalent to 1.9 km car driving. Total cost \$28.46/year. & Section~\ref{sec:monitoring} \\
         D6.3  & Data drift via KS-test on feature distributions. Concept drift via accuracy comparison with severity levels (low/moderate/high/critical). & Section~\ref{sec:monitoring} \\
         D6.4  & MLflow dashboard tracks training metrics, hyperparameters, artifacts, and model versions. CarbonTracker logged as artifact. & Section~\ref{sec:monitoring} \\
-        D7.1  & Na\"ive sequential training causes catastrophic forgetting (99.2\%$\to$0\%). Replay + EWC recovers 89.2\% on old digits while maintaining 98.5\% on new (93.7\% total). & Section~\ref{sec:post-deployment} \\
+        D7.1  & Na\"ive sequential training causes catastrophic forgetting (98.4\%$\to$0.3\%). Replay + EWC recovers 85.9\% on old digits while maintaining 98.6\% on new (92.1\% total). & Section~\ref{sec:post-deployment} \\
         D7.2  & Gradient ascent unlearning reduces digit 7 accuracy from 96.9\% to 0\%. Remaining classes retain 97.8\% avg accuracy. Fine-tuning after unlearning stabilizes shared representations. & Section~\ref{sec:post-deployment} \\
-        D8.1  &  & \\
-        D8.2  &  & \\
+        D8.1  & Learned from three other groups' pipelines: a Vision Transformer with a 65\% accuracy gate, Great Expectations data validation with hashed Singularity container caching, and a training/serving split using ONNX and FastAPI. Guest lecture topics noted briefly. & Section~\ref{sec:guest-lecture} \\
         \bottomrule
     \end{tabularx}
 \end{table*}
