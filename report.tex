@@ -169,9 +169,8 @@ We created configuration files in YAML format to manage hyperparameters without 
 
 \begin{figure}[h]
     \centering
-    % \includegraphics[width=\linewidth]{figures/config_yaml.png}
-    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot of configs/config.yaml showing the hyperparameters (model\_name, learning\_rate 0.001, batch\_size 32, epochs 10, seed 42)\vspace{2em}}}
-    \caption{Configuration file (\texttt{configs/config.yaml}) managing all hyperparameters, eliminating hardcoded values in training scripts.}
+    \includegraphics[width=0.82\linewidth]{figures/config_yaml.png}
+    \caption{The configuration file \texttt{configs/config.yaml}, which holds all hyperparameters so that no values are hardcoded in the training scripts.}
     \label{fig:config-yaml}
 \end{figure}
 
@@ -260,27 +259,22 @@ Unit tests were implemented using \texttt{pytest} covering the core modules of t
 \toprule
 \textbf{Module} & \textbf{Lines} & \textbf{Covered} & \textbf{Coverage} \\
 \midrule
-\texttt{src/\_\_init\_\_.py} & 0 & 0 & 100\% \\
-\texttt{src/data\_loader.py} & 82 & 37 & 45\% \\
 \texttt{src/model.py} & 27 & 23 & 85\% \\
-\texttt{src/evaluate.py} & 58 & 0 & 0\% \\
-\texttt{src/train.py} & 87 & 0 & 0\% \\
+\texttt{src/data\_loader.py} & 81 & 36 & 44\% \\
+\texttt{src/\_\_init\_\_.py} & 0 & 0 & 100\% \\
+Other 16 \texttt{src/} scripts & 1648 & 0 & 0\% \\
 \midrule
-\textbf{Total} & \textbf{254} & \textbf{60} & \textbf{24\%} \\
+\textbf{Total} & \textbf{1756} & \textbf{59} & \textbf{3\%} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The higher coverage for \texttt{model.py} (85\%) and partial coverage of \texttt{data\_loader.py} (45\%) reflects that we test the core functionality: model output shape, save/load, image validation, transforms, and the dataset class. We do not need the full dataset on disk for these tests. \texttt{train.py} and \texttt{evaluate.py} have 0\% unit test coverage because they require the complete dataset and a GPU. We instead validate these modules through integration testing in the Jenkins pipeline.
+The two core modules are well covered. \texttt{model.py} reaches 85\% and \texttt{data\_loader.py} reaches 44\%, because the 8 unit tests check model output shape, save and load, image validation, transforms, and the dataset class. These tests do not need the full dataset on disk. The other 16 files in \texttt{src/} are training, evaluation, and per-module experiment scripts that need a GPU and the full dataset, so we validate them by running them in the pipeline and checking their output, not by unit tests. This is why the overall line coverage across all of \texttt{src/} is only 3\%.
 
-% SCREENSHOT PLACEHOLDER: pytest coverage output
-% Kør: cd MLOps-JKP && pytest tests/ --cov=src --cov-report=term-missing
-% Tag screenshot af terminal output med coverage-tabel (8 passed, 24% total coverage)
 \begin{figure}[h]
     \centering
-    % \includegraphics[width=\linewidth]{figures/pytest_coverage.png}
-    \fbox{\parbox{0.9\linewidth}{\centering\vspace{2em}\textbf{PLACEHOLDER:} Screenshot of the terminal output from \texttt{pytest tests/ --cov=src --cov-report=term-missing} showing 8 passed tests and coverage per module (model.py 85\%, data\_loader.py 45\%, total 24\%)\vspace{2em}}}
-    \caption{Terminal output from \texttt{pytest} showing 8 passing tests and code coverage per module.}
+    \includegraphics[width=\linewidth]{figures/pytest_coverage.png}
+    \caption{Terminal output from \texttt{pytest tests/ --cov=src --cov-report=term-missing}, showing 8 passing tests and the code coverage per module.}
     \label{fig:pytest-coverage}
 \end{figure}
 
